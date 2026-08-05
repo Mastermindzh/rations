@@ -1,0 +1,9 @@
+.git
+.gitignore
+.env
+node_modules
+dist
+tests
+data
+*.log
+initial.spec.md

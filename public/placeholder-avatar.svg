@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 600" role="img" aria-labelledby="title description">
+  <title id="title">Placeholder portrait</title>
+  <desc id="description">A warm illustrated twenty-sided die</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#2d2540"/>
+      <stop offset="1" stop-color="#171c27"/>
+    </linearGradient>
+    <linearGradient id="die" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#ffd38e"/>
+      <stop offset="1" stop-color="#d9973c"/>
+    </linearGradient>
+  </defs>
+  <rect width="600" height="600" rx="72" fill="url(#bg)"/>
+  <circle cx="100" cy="110" r="5" fill="#f7f4ee" opacity=".5"/>
+  <circle cx="490" cy="160" r="7" fill="#f4b860" opacity=".65"/>
+  <path d="M300 104 468 220l-64 198-208 0-64-198z" fill="url(#die)" stroke="#fff1d5" stroke-width="8" stroke-linejoin="round"/>
+  <path d="M300 104v314m-168-198 168 198 168-198M132 220h336" fill="none" stroke="#6e4b25" stroke-width="7" stroke-linejoin="round" opacity=".7"/>
+  <text x="300" y="303" text-anchor="middle" dominant-baseline="middle" fill="#2b1d10" font-family="Georgia,serif" font-size="94" font-weight="700">20</text>
+  <path d="M105 474c54 33 118 49 195 49s142-16 195-49" fill="none" stroke="#fff" stroke-width="6" stroke-linecap="round" opacity=".12"/>
+</svg>

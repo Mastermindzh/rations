@@ -1,0 +1,66 @@
+site:
+  title: Rations
+  password: overview
+  timezone: Europe/Amsterdam
+admin:
+  passwordHash: scrypt$16384$8$1$RB89VsPmiERbHl2VwIRdRg$kMhBH9J-T6yIbwLUK4oR0DThhXkHCtNwbAJVEtXUG90pHXcOydHyhT3S0LiaO1dTJ7_TRBH54STH4hbxIaANdQ
+people:
+  alice:
+    name: Alice
+  bob:
+    name: Bob
+  carol:
+    name: Carol
+  dave:
+    name: Dave
+  erin:
+    name: Erin
+  frank:
+    name: Frank
+  grace:
+    name: Grace
+  heidi:
+    name: Heidi
+gameNights:
+  - id: friday-campaign
+    name: Friday Campaign
+    password: campaign
+    description: |-
+      On average you need between 20 and 25 cans of pop.
+      You also need about 3-4 bags of crisps or something similar.
+    anchorDate: 2026-01-16
+    intervalDays: 14
+    people:
+      - alice
+      - bob
+      - carol
+      - dave
+      - erin
+      - frank
+      - grace
+  - id: board-games
+    name: Board Game Night
+    password: boardgames
+    description: |-
+      On average you need between 10 and 15 cans of pop.
+      You also need about 1-2 bags of crisps or something similar.
+    anchorDate: 2026-01-13
+    intervalDays: 14
+    people:
+      - alice
+      - dave
+      - bob
+      - heidi
+overrides:
+  - gameNight: board-games
+    date: 2026-07-28
+    person: heidi
+    reason: Bob delayed once
+  - gameNight: board-games
+    date: 2026-08-11
+    person: bob
+    reason: Swapped with Heidi
+dateOverrides:
+  - gameNight: board-games
+    oldDate: 2026-07-28
+    newDate: 2026-07-30
