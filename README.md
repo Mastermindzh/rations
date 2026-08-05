@@ -1,6 +1,18 @@
+<p align="center">
+  <img src="public/logo-192.png" alt="Rations logo" width="160" />
+</p>
+
 # Rations
 
 Rations shows who brings snacks to recurring game nights. It is a small, server-rendered Hono application backed by one YAML file—no database and no client-side framework.
+
+## Screenshots
+
+<p align="center">
+  <img src="docs/overview.png" alt="Overview" width="250" />
+  <img src="docs/night.png" alt="Game night" width="250" />
+  <img src="docs/admin.png" alt="Admin dashboard" width="250" />
+</p>
 
 ## Quick start
 

@@ -64,3 +64,6 @@ dateOverrides:
   - gameNight: board-games
     oldDate: 2026-07-28
     newDate: 2026-07-30
+  - gameNight: board-games
+    oldDate: 2026-08-11
+    newDate: 2026-08-13
