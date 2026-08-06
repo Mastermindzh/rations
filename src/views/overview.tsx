@@ -5,6 +5,7 @@ import {
   formatTurnDate,
   OriginalTurnDate,
   OverrideBadge,
+  ExtraBadge,
   Portrait,
 } from "./shared.js";
 
@@ -89,6 +90,7 @@ export const OverviewPage = ({
                   </span>
                 </div>
                 <OverrideBadge turn={turn} />
+                <ExtraBadge turn={turn} />
               </div>
             </article>
           );

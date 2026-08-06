@@ -72,4 +72,15 @@ export const appConfigSchema = z.strictObject({
       }),
     )
     .default([]),
+  extraDays: z
+    .array(
+      z.strictObject({
+        gameNight: z.string(),
+        date: z
+          .string()
+          .regex(ISO_DATE_PATTERN, "Must be an ISO date (YYYY-MM-DD)"),
+        reason: optionalNonEmpty,
+      }),
+    )
+    .default([]),
 });

@@ -135,9 +135,13 @@ export const AdminDashboardPage = ({
                     Delay {person.name} once
                   </button>
                 </form>
-              ) : (
+              ) : night.people.length < 2 ? (
                 <p class="muted small">
                   A one-person rotation cannot be delayed.
+                </p>
+              ) : (
+                <p class="muted small">
+                  {person.name} is already up next, so there is nothing to swap.
                 </p>
               )}
               <form
@@ -175,6 +179,35 @@ export const AdminDashboardPage = ({
                     </button>
                   ) : null}
                 </div>
+              </form>
+              <form
+                class="reschedule-form extra-day-form"
+                method="post"
+                action={`/admin/night/${night.id}/extra-day`}
+              >
+                <CsrfField token={csrfToken} />
+                <input type="hidden" name="expectedVersion" value={version} />
+                <label for={`extra-date-${night.id}`}>Add an extra day</label>
+                <div class="reschedule-controls">
+                  <input
+                    id={`extra-date-${night.id}`}
+                    name="date"
+                    type="date"
+                    required
+                  />
+                  <input
+                    name="reason"
+                    type="text"
+                    placeholder="Reason (optional)"
+                    maxlength={80}
+                  />
+                  <button class="button" type="submit">
+                    Add extra day
+                  </button>
+                </div>
+                <small class="muted small">
+                  Takes the next person in the rotation and shifts the rest.
+                </small>
               </form>
             </article>
           );

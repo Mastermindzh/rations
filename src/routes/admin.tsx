@@ -11,6 +11,7 @@ import { ConfigError } from "../config/config-error.js";
 import { todayInTimezone } from "../schedule/calendar-date.js";
 import { delayOnce } from "../services/delay-once.js";
 import { rescheduleNight } from "../services/reschedule-night.js";
+import { addExtraDay } from "../services/add-extra-day.js";
 import { buildQuickActions } from "../queries/dashboard.js";
 import { AdminDashboardPage } from "../views/admin-dashboard.js";
 import { AdminRepairPage } from "../views/admin-repair.js";
@@ -144,6 +145,22 @@ export function adminRoutes(dataDirectory: string): Hono<AppEnv> {
       return c.redirect("/admin?status=rescheduled", 303);
     } catch (error) {
       return renderConfigError(c, "Reschedule failed", error);
+    }
+  });
+
+  app.post("/admin/night/:id/extra-day", async (c) => {
+    const body = await c.req.parseBody();
+    const reason = stringField(body.reason).trim();
+    try {
+      await addExtraDay(dataDirectory, {
+        gameNightId: c.req.param("id"),
+        expectedVersion: stringField(body.expectedVersion),
+        date: stringField(body.date),
+        ...(reason ? { reason } : {}),
+      });
+      return c.redirect("/admin?status=extra-added", 303);
+    } catch (error) {
+      return renderConfigError(c, "Extra day not added", error);
     }
   });
   return app;

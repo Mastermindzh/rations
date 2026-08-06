@@ -36,6 +36,15 @@ export type DateOverrideConfig = {
   newDate: string;
 };
 
+// A one-off occurrence inserted into the rotation. It takes the next person in
+// line and shifts every later occurrence forward by one; the person is derived,
+// not configured.
+export type ExtraDayConfig = {
+  gameNight: string;
+  date: string;
+  reason?: string;
+};
+
 export type AppConfig = {
   site: SiteConfig;
   admin: AdminConfig;
@@ -43,6 +52,7 @@ export type AppConfig = {
   gameNights: GameNightConfig[];
   overrides: OverrideConfig[];
   dateOverrides: DateOverrideConfig[];
+  extraDays: ExtraDayConfig[];
 };
 
 export type ValidationIssue = {

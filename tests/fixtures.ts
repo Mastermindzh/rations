@@ -38,6 +38,7 @@ export function fixtureConfig(): AppConfig {
     ],
     overrides: [],
     dateOverrides: [],
+    extraDays: [],
   };
 }
 

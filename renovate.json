@@ -1,0 +1,19 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:recommended"
+  ],
+  "timezone": "Europe/Amsterdam",
+  "schedule": [
+    "* 0-6 * * 1"
+  ],
+  "packageRules": [
+    {
+      "matchPackageNames": [
+        "*"
+      ],
+      "groupName": "all dependencies",
+      "groupSlug": "all"
+    }
+  ]
+}

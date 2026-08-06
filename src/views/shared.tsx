@@ -61,6 +61,9 @@ export const Portrait = ({
 export const OverrideBadge = ({ turn }: { turn: GameNightOccurrence }) =>
   turn.isOverride ? <span class="badge badge-override">Swapped</span> : null;
 
+export const ExtraBadge = ({ turn }: { turn: GameNightOccurrence }) =>
+  turn.isExtra ? <span class="badge badge-extra">Extra</span> : null;
+
 export const TurnRow = ({
   config,
   turn,
@@ -82,8 +85,10 @@ export const TurnRow = ({
           {formatTurnDate(turn.date, config.site.timezone)}
           <OriginalTurnDate turn={turn} timezone={config.site.timezone} />
         </span>
+        {turn.reason ? <small class="turn-reason">{turn.reason}</small> : null}
       </div>
       <OverrideBadge turn={turn} />
+      <ExtraBadge turn={turn} />
     </li>
   );
 };

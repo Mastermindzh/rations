@@ -5,6 +5,7 @@ import {
   formatTurnDate,
   OriginalTurnDate,
   OverrideBadge,
+  ExtraBadge,
   Portrait,
   TurnRow,
 } from "./shared.js";
@@ -47,6 +48,7 @@ export const GameNightPage = ({
           <Portrait person={person} large />
           <div class="hero-name">
             <OverrideBadge turn={schedule.current} />
+            <ExtraBadge turn={schedule.current} />
             <h2>{person.name}</h2>
             <p>
               {formatTurnDate(schedule.current.date, config.site.timezone)}

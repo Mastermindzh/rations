@@ -7,6 +7,7 @@ const STATUS_NOTICES: Record<string, Notice> = {
   saved: { kind: "success", message: "Configuration saved successfully." },
   delayed: { kind: "success", message: "The two assignments were swapped." },
   rescheduled: { kind: "success", message: "The game-night date was updated." },
+  "extra-added": { kind: "success", message: "Extra day added." },
 };
 
 export function noticeFromStatus(

@@ -5,6 +5,7 @@ export type GameNightOccurrence = {
   personId: string;
   originalPersonId: string;
   isOverride: boolean;
+  isExtra: boolean;
   reason?: string;
   turnNumber: number;
 };

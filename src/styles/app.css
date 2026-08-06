@@ -324,6 +324,15 @@ h2 {
   color: var(--accent-bright);
   margin-left: auto;
 }
+.badge-extra {
+  background: rgba(117, 197, 155, 0.16);
+  color: var(--success);
+  margin-left: auto;
+}
+.turn-reason {
+  color: var(--text-muted);
+  font-size: 0.8rem;
+}
 
 .back-link {
   display: inline-flex;
@@ -686,6 +695,10 @@ input {
 }
 .reschedule-controls .button {
   flex: 0 0 auto;
+}
+.extra-day-form small {
+  display: block;
+  margin-top: 0.5rem;
 }
 .editor-section {
   padding: clamp(1rem, 3vw, 2rem);

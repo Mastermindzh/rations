@@ -157,4 +157,31 @@ describe("configuration validation", () => {
     config.gameNights[0]!.anchorDate = "2026-02-30";
     expect(messages(config)).toContain("real ISO calendar date");
   });
+
+  it("accepts an extra day on a free date", () => {
+    const config = fixtureConfig();
+    config.extraDays = [{ gameNight: "friday-dnd", date: "2026-07-20" }];
+    expect(messages(config)).toBe("");
+  });
+
+  it("rejects an extra day for an unknown game night", () => {
+    const config = fixtureConfig();
+    config.extraDays = [{ gameNight: "missing", date: "2026-07-20" }];
+    expect(messages(config)).toContain("Unknown game night");
+  });
+
+  it("rejects an extra day that lands on a scheduled night", () => {
+    const config = fixtureConfig();
+    config.extraDays = [{ gameNight: "friday-dnd", date: "2026-07-24" }];
+    expect(messages(config)).toContain("already has a scheduled");
+  });
+
+  it("rejects duplicate extra days", () => {
+    const config = fixtureConfig();
+    config.extraDays = [
+      { gameNight: "friday-dnd", date: "2026-07-20" },
+      { gameNight: "friday-dnd", date: "2026-07-20" },
+    ];
+    expect(messages(config)).toContain("Only one extra day");
+  });
 });

@@ -3,6 +3,7 @@ import { appConfigSchema, SLUG_PATTERN } from "./schema.js";
 import type {
   AppConfig,
   DateOverrideConfig,
+  ExtraDayConfig,
   GameNightConfig,
   OverrideConfig,
   ValidationIssue,
@@ -303,6 +304,84 @@ function validateMovedDateConflicts(
   return errors;
 }
 
+/** Checks one extra day: known night and a valid, free date. */
+function validateExtraDay(
+  extraDay: ExtraDayConfig,
+  index: number,
+  night: GameNightConfig | undefined,
+  movedFrom: Set<string>,
+  movedTo: Set<string>,
+): ValidationIssue[] {
+  const errors: ValidationIssue[] = [];
+  if (!night) {
+    errors.push(
+      issue(
+        `extraDays.${index}.gameNight`,
+        `Unknown game night: ${extraDay.gameNight}`,
+      ),
+    );
+  }
+  if (!isValidCalendarDate(extraDay.date)) {
+    errors.push(
+      issue(`extraDays.${index}.date`, "Must be a real ISO calendar date"),
+    );
+  } else if (night && isValidCalendarDate(night.anchorDate)) {
+    const key = nightDateKey(night.id, extraDay.date);
+    const clashesWithSchedule =
+      alignsWithSchedule(night, extraDay.date) && !movedFrom.has(key);
+    if (clashesWithSchedule || movedTo.has(key)) {
+      errors.push(
+        issue(
+          `extraDays.${index}.date`,
+          `Date already has a scheduled ${night.id} night`,
+        ),
+      );
+    }
+  }
+  return errors;
+}
+
+/** Checks all extra days and rejects duplicates or dates that already hold a night. */
+function validateExtraDays(
+  config: AppConfig,
+  nightById: Map<string, GameNightConfig>,
+): ValidationIssue[] {
+  const movedFrom = new Set(
+    config.dateOverrides.map((override) =>
+      nightDateKey(override.gameNight, override.oldDate),
+    ),
+  );
+  const movedTo = new Set(
+    config.dateOverrides.map((override) =>
+      nightDateKey(override.gameNight, override.newDate),
+    ),
+  );
+  const errors: ValidationIssue[] = [];
+  const seenKeys = new Set<string>();
+  config.extraDays.forEach((extraDay, index) => {
+    errors.push(
+      ...validateExtraDay(
+        extraDay,
+        index,
+        nightById.get(extraDay.gameNight),
+        movedFrom,
+        movedTo,
+      ),
+    );
+    const key = nightDateKey(extraDay.gameNight, extraDay.date);
+    if (seenKeys.has(key)) {
+      errors.push(
+        issue(
+          `extraDays.${index}`,
+          "Only one extra day is allowed per game night and date",
+        ),
+      );
+    }
+    seenKeys.add(key);
+  });
+  return errors;
+}
+
 /** Fully validates untrusted input: schema first, then cross-field domain rules. */
 export function validateConfig(
   value: unknown,
@@ -329,6 +408,7 @@ export function validateConfig(
     ...validateOverrides(config, nightById),
     ...validateDateOverrides(config, nightById),
     ...validateMovedDateConflicts(config, nightById),
+    ...validateExtraDays(config, nightById),
   ];
 
   return errors.length > 0

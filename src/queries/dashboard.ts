@@ -14,7 +14,8 @@ export function buildQuickActions(
 ): QuickNight[] {
   return config.gameNights
     .map((night, configuredIndex) => {
-      const schedule = resolveNightSchedule(config, night, today, 1);
+      // Rotation-only: delay/reschedule act on recurring turns, not extra days.
+      const schedule = resolveNightSchedule(config, night, today, 1, false);
       return {
         night,
         current: schedule.current,

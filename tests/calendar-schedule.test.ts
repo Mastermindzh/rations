@@ -8,6 +8,7 @@ import {
 import {
   resolveNightSchedule,
   resolveRelevantTurn,
+  resolveExtraDay,
   resolveTurnNumber,
 } from "../src/schedule/resolve-turn.js";
 import { fixtureConfig } from "./fixtures.js";
@@ -159,6 +160,69 @@ describe("calendar dates and schedule resolution", () => {
     expect(
       resolveRelevantTurn(config, config.gameNights[1]!, "2026-07-17").personId,
     ).toBe("rick");
+  });
+
+  it("surfaces an extra day ahead of the next scheduled night", () => {
+    const config = fixtureConfig();
+    config.extraDays.push({
+      gameNight: "friday-dnd",
+      date: "2026-07-20",
+      reason: "Bonus session",
+    });
+    expect(
+      resolveRelevantTurn(config, config.gameNights[0]!, "2026-07-18"),
+    ).toMatchObject({
+      date: "2026-07-20",
+      personId: "alice",
+      isExtra: true,
+      reason: "Bonus session",
+    });
+  });
+
+  it("shifts later occurrences forward when an extra day is inserted", () => {
+    const config = fixtureConfig();
+    config.extraDays.push({ gameNight: "friday-dnd", date: "2026-07-20" });
+    const night = config.gameNights[0]!;
+    // Extra day takes the next person (alice); the following turns shift on.
+    expect(resolveExtraDay(config, night, config.extraDays[0]!)).toMatchObject({
+      personId: "alice",
+    });
+    expect(resolveTurnNumber(config, night, 1)).toMatchObject({
+      date: "2026-07-24",
+      personId: "bob",
+    });
+    expect(resolveTurnNumber(config, night, 2)).toMatchObject({
+      date: "2026-07-31",
+      personId: "rick",
+    });
+  });
+
+  it("shifts the rotation but hides the extra day in the rotation-only view", () => {
+    const config = fixtureConfig();
+    config.extraDays.push({ gameNight: "friday-dnd", date: "2026-07-20" });
+    const rotationOnly = resolveNightSchedule(
+      config,
+      config.gameNights[0]!,
+      "2026-07-18",
+      1,
+      false,
+    );
+    expect(rotationOnly.current).toMatchObject({
+      date: "2026-07-24",
+      personId: "bob",
+      isExtra: false,
+    });
+  });
+
+  it("keeps extra days scoped to their own game night", () => {
+    const config = fixtureConfig();
+    config.extraDays.push({
+      gameNight: "friday-dnd",
+      date: "2026-07-20",
+    });
+    expect(
+      resolveRelevantTurn(config, config.gameNights[1]!, "2026-07-18").isExtra,
+    ).toBe(false);
   });
 
   it("does not shift dates over DST boundaries", () => {

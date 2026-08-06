@@ -125,7 +125,8 @@ const isMain =
   import.meta.url === new URL(`file://${process.argv[1]}`).href;
 if (isMain) {
   const port = Number(process.env.PORT ?? 3000);
-  serve({ fetch: createApp().fetch, port, hostname: "0.0.0.0" }, (info) => {
-    console.log(`Rations listening on http://0.0.0.0:${info.port}`);
+  // Dual-stack: `::` accepts both IPv6 and IPv4 so `localhost` resolves either way.
+  serve({ fetch: createApp().fetch, port, hostname: "::" }, (info) => {
+    console.log(`Rations listening on port ${info.port}`);
   });
 }

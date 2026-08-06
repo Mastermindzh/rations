@@ -81,6 +81,11 @@ dateOverrides:
   - gameNight: board-games
     oldDate: 2026-07-28
     newDate: 2026-07-30
+
+extraDays:
+  - gameNight: board-games
+    date: 2026-08-15
+    reason: Extra session # Optional label
 ```
 
 - IDs use lowercase slugs such as `gloomhaven`.
@@ -92,8 +97,9 @@ dateOverrides:
 - `dateOverrides` reschedule one occurrence. `oldDate` must be a date from the recurring schedule; `newDate` is the actual replacement date.
 - Rescheduled occurrences show their new date and retain an “Originally …” date throughout the site.
 - Snack-assignment `overrides` continue to use the scheduled `oldDate` when the same occurrence is also rescheduled.
+- `extraDays` insert a one-off game night into the rotation. The date must be free (not already a scheduled or rescheduled occurrence). The person is assigned automatically—the extra day takes the next person in line and every later occurrence shifts forward by one. Extra days appear in the schedule with an “Extra” badge.
 
-The admin page contains quick actions for delaying a person or changing the next game date. A rescheduled date can be reset to its recurring scheduled date. The complete YAML editor and game schedule are collapsible. Invalid YAML is never saved.
+The admin page contains quick actions for delaying a person, changing the next game date, or adding an extra day. A rescheduled date can be reset to its recurring scheduled date. The complete YAML editor and game schedule are collapsible. Invalid YAML is never saved.
 
 ## Sharing a game night
 
