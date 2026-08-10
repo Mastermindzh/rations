@@ -14,7 +14,7 @@
   },
   "dependencies": {
     "@hono/node-server": "1.19.14",
-    "hono": "4.12.30",
+    "hono": "4.13.1",
     "luxon": "3.7.2",
     "yaml": "2.9.0",
     "zod": "4.3.6"
