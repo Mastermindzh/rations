@@ -225,6 +225,21 @@ describe("calendar dates and schedule resolution", () => {
     ).toBe(false);
   });
 
+  it("always keeps upcoming extra days beyond the render limit", () => {
+    const config = fixtureConfig();
+    config.extraDays.push({ gameNight: "friday-dnd", date: "2026-12-26" });
+    const schedule = resolveNightSchedule(
+      config,
+      config.gameNights[0]!,
+      "2026-07-17",
+    );
+    expect(
+      schedule.upcoming.some(
+        (turn) => turn.date === "2026-12-26" && turn.isExtra,
+      ),
+    ).toBe(true);
+  });
+
   it("does not shift dates over DST boundaries", () => {
     expect(addCalendarDays("2026-03-28", 1)).toBe("2026-03-29");
     expect(addCalendarDays("2026-10-24", 1)).toBe("2026-10-25");

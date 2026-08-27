@@ -7,7 +7,7 @@
     "dev": "tsx watch src/index.tsx",
     "build": "tsc -p tsconfig.build.json",
     "start": "node dist/index.js",
-    "hash-password": "node scripts/hash-password.mjs",
+    "hash-password": "tsx scripts/hash-password.mjs",
     "check": "tsc --noEmit && vitest run",
     "test": "vitest run",
     "test:watch": "vitest"

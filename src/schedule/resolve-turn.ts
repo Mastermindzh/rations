@@ -104,7 +104,8 @@ export function resolveNightSchedule(
 
 // Builds the soonest `count` occurrences on or after `currentDate`: it generates
 // candidate turn numbers (with extra buffer for reschedules), resolves them plus
-// any extra days, then filters to future dates and sorts by date.
+// any extra days, then filters to future dates and sorts by date. Upcoming extra
+// days are always kept, even beyond `count`.
 function resolveFutureTurns(
   config: AppConfig,
   night: GameNightConfig,
@@ -141,5 +142,5 @@ function resolveFutureTurns(
         left.date.localeCompare(right.date) ||
         left.turnNumber - right.turnNumber,
     )
-    .slice(0, count);
+    .filter((turn, index) => index < count || turn.isExtra);
 }

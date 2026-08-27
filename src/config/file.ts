@@ -1,9 +1,13 @@
 import { createHash } from "node:crypto";
-import { mkdir, open, readFile, rename, stat, unlink } from "node:fs/promises";
-import { dirname, join } from "node:path";
+import { readFile, stat } from "node:fs/promises";
+import { join } from "node:path";
 import { stringify } from "yaml";
 import { parseAndValidateYaml } from "./yaml.js";
 import { ConfigError } from "./config-error.js";
+import {
+  createSerialQueue,
+  writeFileAtomically,
+} from "../storage/atomic-file.js";
 import type {
   AppConfig,
   LoadedConfig,
@@ -11,7 +15,7 @@ import type {
   ValidationResult,
 } from "./types.js";
 
-let writeQueue: Promise<void> = Promise.resolve();
+const withWriteLock = createSerialQueue();
 
 /** Resolves the data directory from DATA_DIRECTORY, falling back to ./data. */
 export function configuredDataDirectory(): string {
@@ -117,65 +121,13 @@ function assertVersion(actual: string, expected: string): void {
 }
 
 /**
- * Durably replaces config.yml by writing a temp file, fsyncing it, then renaming
- * over the target so readers never observe a partial write. Returns the reloaded
- * config and removes the temp file if anything fails before the rename.
+ * Durably replaces config.yml (atomic temp-write + rename) and returns the
+ * reloaded config.
  */
 async function atomicReplace(
   dataDirectory: string,
   rawYaml: string,
 ): Promise<LoadedConfig> {
-  const configPath = join(dataDirectory, "config.yml");
-  const temporaryPath = `${configPath}.tmp`;
-  await mkdir(dirname(configPath), { recursive: true });
-  let temporaryCreated = false;
-  try {
-    const handle = await open(temporaryPath, "w", 0o600);
-    temporaryCreated = true;
-    try {
-      await handle.writeFile(rawYaml, "utf8");
-      await handle.sync();
-    } finally {
-      await handle.close();
-    }
-
-    await rename(temporaryPath, configPath);
-    temporaryCreated = false;
-    await syncDirectory(dirname(configPath));
-    return loadConfig(dataDirectory);
-  } finally {
-    if (temporaryCreated) await unlink(temporaryPath).catch(() => undefined);
-  }
-}
-
-/** Best-effort fsync of the directory so the rename survives a crash; logs on failure. */
-async function syncDirectory(directory: string): Promise<void> {
-  try {
-    const handle = await open(directory, "r");
-    try {
-      await handle.sync();
-    } finally {
-      await handle.close();
-    }
-  } catch (error) {
-    console.warn(
-      "Could not fsync configuration directory:",
-      error instanceof Error ? error.message : error,
-    );
-  }
-}
-
-/** Serialises writes into a single-file queue so saves never interleave. */
-async function withWriteLock<T>(operation: () => Promise<T>): Promise<T> {
-  const previous = writeQueue;
-  let release!: () => void;
-  writeQueue = new Promise<void>((resolve) => {
-    release = resolve;
-  });
-  await previous;
-  try {
-    return await operation();
-  } finally {
-    release();
-  }
+  await writeFileAtomically(join(dataDirectory, "config.yml"), rawYaml);
+  return loadConfig(dataDirectory);
 }

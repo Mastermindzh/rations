@@ -14,7 +14,9 @@ export function parseAndValidateYaml(rawYaml: string): ValidationResult {
   }
 
   const result = validateConfig(value);
-  if (!result.success) return result;
+  if (!result.success) {
+    return result;
+  }
   return {
     success: true,
     config: result.config,

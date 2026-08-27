@@ -1,14 +1,6 @@
-import {
-  access,
-  mkdir,
-  mkdtemp,
-  readFile,
-  rm,
-  writeFile,
-} from "node:fs/promises";
-import { tmpdir } from "node:os";
+import { access, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
-import { afterEach, describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 import {
   loadConfig,
   readConfigFile,
@@ -16,23 +8,9 @@ import {
 } from "../src/config/file.js";
 import { ConfigError } from "../src/config/config-error.js";
 import { fixtureConfig, fixtureYaml } from "./fixtures.js";
+import { createTestWorkspace } from "./test-workspace.js";
 
-const directories: string[] = [];
-async function setup() {
-  const directory = await mkdtemp(join(tmpdir(), "rations-test-"));
-  directories.push(directory);
-  await mkdir(join(directory, "images"));
-  await writeFile(join(directory, "config.yml"), fixtureYaml());
-  return directory;
-}
-
-afterEach(async () => {
-  await Promise.all(
-    directories
-      .splice(0)
-      .map((directory) => rm(directory, { recursive: true, force: true })),
-  );
-});
+const setup = () => createTestWorkspace("rations-test-");
 
 describe("configuration file", () => {
   it("saves valid YAML without creating extra persistent files", async () => {

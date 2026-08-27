@@ -1,15 +1,17 @@
 import type { AppConfig, ExtraDayConfig } from "../config/types.js";
 import { changeConfig } from "../config/file.js";
-import { ConfigError } from "../config/config-error.js";
+import { requireGameNight } from "../config/lookups.js";
+
+type AddExtraDayInput = {
+  gameNightId: string;
+  expectedVersion: string;
+  date: string;
+  reason?: string;
+};
 
 export async function addExtraDay(
   dataDirectory: string,
-  input: {
-    gameNightId: string;
-    expectedVersion: string;
-    date: string;
-    reason?: string;
-  },
+  input: AddExtraDayInput,
 ) {
   return changeConfig(dataDirectory, input.expectedVersion, (config) =>
     applyAddExtraDay(config, input.gameNightId, input.date, input.reason),
@@ -24,9 +26,7 @@ export function applyAddExtraDay(
   date: string,
   reason?: string,
 ): AppConfig {
-  if (!config.gameNights.some((night) => night.id === gameNightId)) {
-    throw new ConfigError("Unknown game night", "UNKNOWN_GAME_NIGHT");
-  }
+  requireGameNight(config, gameNightId);
   const extraDay: ExtraDayConfig = reason
     ? { gameNight: gameNightId, date, reason }
     : { gameNight: gameNightId, date };

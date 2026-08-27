@@ -1,6 +1,11 @@
 import { Layout } from "./layout.js";
+import { ErrorNotice } from "./notice-banner.js";
 
-export const LoginPage = ({ error }: { error?: string }) => (
+type LoginPageProps = {
+  error?: string;
+};
+
+export const LoginPage = ({ error }: LoginPageProps) => (
   <Layout title="Admin login" showHeader={false}>
     <section class="auth-card">
       <img
@@ -13,11 +18,7 @@ export const LoginPage = ({ error }: { error?: string }) => (
       <span class="eyebrow">Keeper of the snacks</span>
       <h1>Admin login</h1>
       <p>Sign in to change the rotation or edit the configuration.</p>
-      {error ? (
-        <div class="notice notice-error" role="alert">
-          {error}
-        </div>
-      ) : null}
+      <ErrorNotice message={error} />
       <form method="post" action="/admin/login" class="stack-form">
         <label for="password">Password</label>
         <input

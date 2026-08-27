@@ -5,13 +5,17 @@ import { readSession } from "../auth/session.js";
 export const identifyAdmin: MiddlewareHandler<AppEnv> = async (c, next) => {
   const session = await readSession(c);
   c.set("isAdmin", Boolean(session));
-  if (session) c.set("csrfToken", session.csrfToken);
+  if (session) {
+    c.set("csrfToken", session.csrfToken);
+  }
   await next();
 };
 
 export const requireAdmin: MiddlewareHandler<AppEnv> = async (c, next) => {
   const session = await readSession(c);
-  if (!session) return c.redirect("/admin/login", 303);
+  if (!session) {
+    return c.redirect("/admin/login", 303);
+  }
   c.set("isAdmin", true);
   c.set("csrfToken", session.csrfToken);
   await next();
@@ -19,7 +23,9 @@ export const requireAdmin: MiddlewareHandler<AppEnv> = async (c, next) => {
 
 export const requireCsrf: MiddlewareHandler<AppEnv> = async (c, next) => {
   const session = await readSession(c);
-  if (!session) return c.redirect("/admin/login", 303);
+  if (!session) {
+    return c.redirect("/admin/login", 303);
+  }
   const contentType = c.req.header("content-type") ?? "";
   if (
     !contentType.includes("application/x-www-form-urlencoded") &&

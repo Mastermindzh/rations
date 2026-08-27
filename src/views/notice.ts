@@ -8,6 +8,9 @@ const STATUS_NOTICES: Record<string, Notice> = {
   delayed: { kind: "success", message: "The two assignments were swapped." },
   rescheduled: { kind: "success", message: "The game-night date was updated." },
   "extra-added": { kind: "success", message: "Extra day added." },
+  "proposal-approved": { kind: "success", message: "Proposal approved." },
+  "proposal-denied": { kind: "info", message: "Proposal denied." },
+  "proposal-deleted": { kind: "success", message: "Proposal deleted." },
 };
 
 export function noticeFromStatus(

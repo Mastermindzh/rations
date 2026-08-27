@@ -1,13 +1,20 @@
 import type { AppConfig } from "../config/types.js";
 import { changeConfig } from "../config/file.js";
+import { personName, requireGameNight } from "../config/lookups.js";
 import { ConfigError } from "../config/config-error.js";
 import { turnNumberForDate } from "../schedule/calculate-schedule.js";
 import { resolveTurnNumber } from "../schedule/resolve-turn.js";
 import { setOverride } from "./set-override.js";
 
+type DelayOnceInput = {
+  gameNightId: string;
+  expectedVersion: string;
+  currentDate: string;
+};
+
 export async function delayOnce(
   dataDirectory: string,
-  input: { gameNightId: string; expectedVersion: string; currentDate: string },
+  input: DelayOnceInput,
 ) {
   return changeConfig(dataDirectory, input.expectedVersion, (config) =>
     applyDelayOnce(config, input.gameNightId, input.currentDate),
@@ -19,8 +26,7 @@ export function applyDelayOnce(
   gameNightId: string,
   currentDate: string,
 ): AppConfig {
-  const night = config.gameNights.find((item) => item.id === gameNightId);
-  if (!night) throw new ConfigError("Unknown game night", "UNKNOWN_GAME_NIGHT");
+  const night = requireGameNight(config, gameNightId);
   const current = resolveTurnNumber(
     config,
     night,
@@ -40,8 +46,8 @@ export function applyDelayOnce(
       "INVALID_DELAY",
     );
   }
-  const currentName = config.people[current.personId]?.name ?? current.personId;
-  const nextName = config.people[next.personId]?.name ?? next.personId;
+  const currentName = personName(config, current.personId);
+  const nextName = personName(config, next.personId);
   let updated = setOverride(
     config,
     night.id,

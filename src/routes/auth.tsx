@@ -5,13 +5,16 @@ import { verifyPassword } from "../auth/password.js";
 import { LoginPage } from "../views/login.js";
 import { loadConfig } from "../config/file.js";
 import { clientIp, createLoginThrottle } from "../services/login-throttle.js";
+import { stringField } from "./form-fields.js";
 
 export function authRoutes(dataDirectory: string): Hono<AppEnv> {
   const app = new Hono<AppEnv>();
   const throttle = createLoginThrottle();
 
   app.get("/admin/login", async (c) => {
-    if (c.get("isAdmin")) return c.redirect("/admin", 303);
+    if (c.get("isAdmin")) {
+      return c.redirect("/admin", 303);
+    }
     return c.html(<LoginPage />);
   });
 
@@ -26,7 +29,7 @@ export function authRoutes(dataDirectory: string): Hono<AppEnv> {
       );
     }
     const body = await c.req.parseBody();
-    const password = typeof body.password === "string" ? body.password : "";
+    const password = stringField(body.password);
     const configuredHash = (await loadConfig(dataDirectory)).config.admin
       .passwordHash;
     const valid =

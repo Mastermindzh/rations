@@ -14,7 +14,10 @@ export function setOverride(
     (item) => item.gameNight === gameNightId && item.date === date,
   );
   const overrides = [...config.overrides];
-  if (index >= 0) overrides[index] = replacement;
-  else overrides.push(replacement);
+  if (index >= 0) {
+    overrides[index] = replacement;
+  } else {
+    overrides.push(replacement);
+  }
   return { ...config, overrides };
 }

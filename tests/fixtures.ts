@@ -45,3 +45,13 @@ export function fixtureConfig(): AppConfig {
 export function fixtureYaml(config = fixtureConfig()): string {
   return stringify(config);
 }
+
+export function futureProposalConfig(): AppConfig {
+  const config = fixtureConfig();
+  config.gameNights[0]!.anchorDate = "2099-01-05";
+  config.gameNights[0]!.intervalDays = 7;
+  config.overrides = [];
+  config.dateOverrides = [];
+  config.extraDays = [];
+  return config;
+}
