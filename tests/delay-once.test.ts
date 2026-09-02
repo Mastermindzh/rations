@@ -85,6 +85,32 @@ describe("delay once", () => {
     });
   });
 
+  it("swaps the next two actual recurring occurrences after a move", () => {
+    const config = fixtureConfig();
+    config.dateOverrides.push({
+      gameNight: "friday-dnd",
+      oldDate: "2026-07-31",
+      newDate: "2026-07-23",
+    });
+
+    const updated = applyDelayOnce(config, "friday-dnd", "2026-07-31");
+
+    expect(updated.overrides).toEqual([
+      expect.objectContaining({ date: "2026-07-31", person: "bob" }),
+      expect.objectContaining({ date: "2026-07-24", person: "alice" }),
+    ]);
+    expect(
+      resolveRelevantTurn(updated, updated.gameNights[0]!, "2026-07-23"),
+    ).toMatchObject({
+      date: "2026-07-23",
+      originalDate: "2026-07-31",
+      personId: "bob",
+    });
+    expect(
+      resolveRelevantTurn(updated, updated.gameNights[0]!, "2026-07-24"),
+    ).toMatchObject({ date: "2026-07-24", personId: "alice" });
+  });
+
   it("rejects one-person rotations and unknown game nights", () => {
     const config = fixtureConfig();
     config.gameNights[0]!.people = ["rick"];

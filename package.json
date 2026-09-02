@@ -13,18 +13,18 @@
     "test:watch": "vitest"
   },
   "dependencies": {
-    "@hono/node-server": "1.19.14",
-    "hono": "4.12.30",
+    "@hono/node-server": "2.1.1",
+    "hono": "4.13.5",
     "luxon": "3.7.2",
     "yaml": "2.9.0",
-    "zod": "4.3.6"
+    "zod": "4.5.4"
   },
   "devDependencies": {
-    "@types/luxon": "3.7.1",
-    "@types/node": "24.13.3",
-    "tsx": "4.21.0",
-    "typescript": "5.9.3",
-    "vitest": "4.1.10"
+    "@types/luxon": "3.7.5",
+    "@types/node": "26.4.1",
+    "tsx": "4.23.13",
+    "typescript": "7.0.2",
+    "vitest": "4.1.11"
   },
   "engines": {
     "node": ">=24.0.0"

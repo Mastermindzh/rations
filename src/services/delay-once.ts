@@ -3,7 +3,10 @@ import { changeConfig } from "../config/file.js";
 import { personName, requireGameNight } from "../config/lookups.js";
 import { ConfigError } from "../config/config-error.js";
 import { turnNumberForDate } from "../schedule/calculate-schedule.js";
-import { resolveTurnNumber } from "../schedule/resolve-turn.js";
+import {
+  resolveNightSchedule,
+  resolveTurnNumber,
+} from "../schedule/resolve-turn.js";
 import { setOverride } from "./set-override.js";
 
 type DelayOnceInput = {
@@ -12,10 +15,7 @@ type DelayOnceInput = {
   currentDate: string;
 };
 
-export async function delayOnce(
-  dataDirectory: string,
-  input: DelayOnceInput,
-) {
+export async function delayOnce(dataDirectory: string, input: DelayOnceInput) {
   return changeConfig(dataDirectory, input.expectedVersion, (config) =>
     applyDelayOnce(config, input.gameNightId, input.currentDate),
   );
@@ -39,7 +39,23 @@ export function applyDelayOnce(
       "INVALID_DELAY",
     );
   }
-  const next = resolveTurnNumber(config, night, current.turnNumber + 1);
+  const chronologicalNights = resolveNightSchedule(
+    config,
+    night,
+    current.date,
+    1,
+    false,
+  );
+  if (
+    (chronologicalNights.current.originalDate ??
+      chronologicalNights.current.date) !== currentScheduledDate
+  ) {
+    throw new ConfigError(
+      "The submitted turn is no longer current",
+      "INVALID_DELAY",
+    );
+  }
+  const next = chronologicalNights.upcoming[0]!;
   if (current.personId === next.personId) {
     throw new ConfigError(
       "Delay once requires two different participants",

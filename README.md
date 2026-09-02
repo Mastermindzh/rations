@@ -101,6 +101,7 @@ extraDays:
 - Portraits may be JPG, PNG, WebP, or AVIF files.
 - `dateOverrides` reschedule one occurrence. `oldDate` must be a date from the recurring schedule; `newDate` is the actual replacement date.
 - Rescheduled occurrences show their new date and retain an “Originally …” date throughout the site.
+- Rescheduling changes only the calendar order. Snack duty is assigned after all dates are ordered, so moving a night earlier gives it the next person in line and shifts any crossed nights without shuffling the people queue.
 - Snack-assignment `overrides` continue to use the scheduled `oldDate` when the same occurrence is also rescheduled.
 - `extraDays` insert a one-off game night into the rotation. The date must be free (not already a scheduled or rescheduled occurrence). The person is assigned automatically—the extra day takes the next person in line and every later occurrence shifts forward by one. Extra days appear in the schedule with an “Extra” badge.
 

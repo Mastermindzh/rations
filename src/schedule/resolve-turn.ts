@@ -10,37 +10,56 @@ import {
   turnNumberForDate,
 } from "./calculate-schedule.js";
 
-// Counts this night's extra days strictly before `date`. Each one shifts the
-// rotation forward by one person (see docs/scheduling.md).
-function extraDaysBefore(
+// Counts actual occurrences strictly before `date`. Recurring dates establish
+// the baseline; moves remove an occurrence at its old position and insert it at
+// its new position, while extra days insert another occurrence. This makes the
+// people rotation follow chronological event order rather than logical dates.
+function rotationIndexBeforeDate(
   config: AppConfig,
   night: GameNightConfig,
   date: string,
 ): number {
-  return config.extraDays.filter(
+  const movedOccurrenceAdjustment = config.dateOverrides
+    .filter((item) => item.gameNight === night.id)
+    .reduce((adjustment, item) => {
+      const removedAtOldDate = item.oldDate < date ? -1 : 0;
+      const insertedAtNewDate = item.newDate < date ? 1 : 0;
+      return adjustment + removedAtOldDate + insertedAtNewDate;
+    }, 0);
+  const extraOccurrences = config.extraDays.filter(
     (item) => item.gameNight === night.id && item.date < date,
   ).length;
+
+  return (
+    turnNumberForDate(night, date) +
+    movedOccurrenceAdjustment +
+    extraOccurrences
+  );
 }
 
-// Resolves one turn number into an occurrence: the base rotation person (shifted
-// by any preceding extra days), then person and date overrides layered on top.
+// Resolves one logical recurring turn into an actual occurrence. Its base person
+// comes from the occurrence's chronological position after date moves and extra
+// days; an explicit person override is then layered on top.
 export function resolveTurnNumber(
   config: AppConfig,
   night: GameNightConfig,
   turnNumber: number,
 ): GameNightOccurrence {
   const scheduledDate = turnDate(night, turnNumber);
-  const shift = extraDaysBefore(config, night, scheduledDate);
-  const originalPersonId = basePersonForTurn(night, turnNumber + shift);
   const override = config.overrides.find(
     (item) => item.gameNight === night.id && item.date === scheduledDate,
   );
   const dateOverride = config.dateOverrides.find(
     (item) => item.gameNight === night.id && item.oldDate === scheduledDate,
   );
+  const date = dateOverride?.newDate ?? scheduledDate;
+  const originalPersonId = basePersonForTurn(
+    night,
+    rotationIndexBeforeDate(config, night, date),
+  );
   const base = {
     gameNightId: night.id,
-    date: dateOverride?.newDate ?? scheduledDate,
+    date,
     personId: override?.person ?? originalPersonId,
     originalPersonId,
     isOverride: Boolean(override),
@@ -58,9 +77,7 @@ export function resolveExtraDay(
   night: GameNightConfig,
   extraDay: ExtraDayConfig,
 ): GameNightOccurrence {
-  const rotationIndex =
-    turnNumberForDate(night, extraDay.date) +
-    extraDaysBefore(config, night, extraDay.date);
+  const rotationIndex = rotationIndexBeforeDate(config, night, extraDay.date);
   const personId = basePersonForTurn(night, rotationIndex);
   const base: GameNightOccurrence = {
     gameNightId: night.id,
