@@ -1,5 +1,6 @@
 import type { AppConfig, GameNightConfig } from "../config/types.js";
 import type { GameNightOccurrence } from "../schedule/types.js";
+import { withSharePassword } from "../services/share-access.js";
 import { Layout } from "./layout.js";
 import {
   formatTurnDate,
@@ -9,12 +10,7 @@ import {
   Portrait,
 } from "./shared.js";
 
-export const OverviewPage = ({
-  config,
-  entries,
-  admin,
-  csrfToken,
-}: {
+type OverviewPageProps = {
   config: AppConfig;
   entries: Array<{
     night: GameNightConfig;
@@ -22,8 +18,17 @@ export const OverviewPage = ({
     shareUrl: string;
   }>;
   admin: boolean;
+  proposalCounts?: Record<string, number>;
   csrfToken?: string;
-}) => (
+};
+
+export const OverviewPage = ({
+  config,
+  entries,
+  admin,
+  proposalCounts = {},
+  csrfToken,
+}: OverviewPageProps) => (
   <Layout
     title={config.site.title}
     siteTitle={config.site.title}
@@ -35,7 +40,9 @@ export const OverviewPage = ({
       <section class="night-grid" aria-label="Game nights">
         {entries.map(({ night, turn, shareUrl }) => {
           const person = config.people[turn.personId];
-          if (!person) return null;
+          if (!person) {
+            return null;
+          }
           return (
             <article class="night-card">
               <a
@@ -92,6 +99,18 @@ export const OverviewPage = ({
                 <OverrideBadge turn={turn} />
                 <ExtraBadge turn={turn} />
               </div>
+              {proposalCounts[night.id] ? (
+                <a
+                  class="card-proposals"
+                  href={withSharePassword(
+                    `/night/${night.id}/proposals`,
+                    night.password,
+                  )}
+                >
+                  {proposalCounts[night.id]} open date{" "}
+                  {proposalCounts[night.id] === 1 ? "proposal" : "proposals"} →
+                </a>
+              ) : null}
             </article>
           );
         })}

@@ -1,0 +1,28 @@
+proposals:
+  - id: swap-cb96e49e0b22
+    gameNight: board-games
+    createdBy: dave
+    createdAt: 2026-08-25T13:39:51.785Z
+    votes:
+      - date: 2026-08-26
+        person: dave
+        vote: down
+      - date: 2026-08-26
+        person: alice
+        vote: down
+    type: swap
+    targetDate: 2026-08-25
+    newDate: 2026-08-26
+  - id: planner-070927691f26
+    gameNight: board-games
+    createdBy: dave
+    createdAt: 2026-08-27T13:58:01.303Z
+    title: eric test
+    votes: []
+    type: planner
+    unavailableThreshold: 2
+    candidates:
+      - 2026-08-27
+      - 2026-08-28
+      - 2026-08-29
+      - 2026-08-30

@@ -9,7 +9,9 @@ export function renderConfigError(
   title: string,
   error: unknown,
 ): Response | Promise<Response> {
-  if (!(error instanceof ConfigError)) throw error;
+  if (!(error instanceof ConfigError)) {
+    throw error;
+  }
   const status = error.code === "STALE_VERSION" ? 409 : 400;
   return c.html(
     <ErrorPage

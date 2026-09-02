@@ -1,19 +1,13 @@
 import type { AppConfig, GameNightConfig } from "../config/types.js";
 import type { GameNightOccurrence } from "../schedule/types.js";
 import { resolveRelevantTurn } from "../schedule/resolve-turn.js";
+import { withSharePassword } from "../services/share-access.js";
 
 export type OverviewEntry = {
   night: GameNightConfig;
   turn: GameNightOccurrence;
   shareUrl: string;
 };
-
-function shareUrl(nightId: string, password?: string): string {
-  const path = `/night/${encodeURIComponent(nightId)}`;
-  return password
-    ? `${path}?${new URLSearchParams({ password }).toString()}`
-    : path;
-}
 
 export function buildOverviewEntries(
   config: AppConfig,
@@ -23,7 +17,10 @@ export function buildOverviewEntries(
     .map((night, configuredIndex) => ({
       night,
       turn: resolveRelevantTurn(config, night, today),
-      shareUrl: shareUrl(night.id, night.password),
+      shareUrl: withSharePassword(
+        `/night/${encodeURIComponent(night.id)}`,
+        night.password,
+      ),
       configuredIndex,
     }))
     .sort(

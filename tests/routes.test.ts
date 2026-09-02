@@ -1,28 +1,18 @@
-import { mkdir, writeFile } from "node:fs/promises";
+import { writeFile } from "node:fs/promises";
 import { join } from "node:path";
-import { tmpdir } from "node:os";
-import { mkdtemp, rm } from "node:fs/promises";
-import { afterEach, describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 import { createApp } from "../src/index.js";
 import { fixtureConfig, fixtureYaml } from "./fixtures.js";
 import { hashPassword } from "../src/auth/password.js";
+import { createTestWorkspace } from "./test-workspace.js";
 
-const directories: string[] = [];
-async function app(config = fixtureConfig()) {
-  const directory = await mkdtemp(join(tmpdir(), "rations-route-"));
-  directories.push(directory);
-  await mkdir(join(directory, "images"));
-  await writeFile(join(directory, "config.yml"), fixtureYaml(config));
+let activeDirectory: string | undefined;
+
+const app = async (config = fixtureConfig()) => {
+  const directory = await createTestWorkspace("rations-route-", config);
+  activeDirectory = directory;
   return createApp(directory);
-}
-
-afterEach(async () => {
-  await Promise.all(
-    directories
-      .splice(0)
-      .map((directory) => rm(directory, { recursive: true, force: true })),
-  );
-});
+};
 
 describe("HTTP routes", () => {
   it("accepts separate list and game passwords in the URL", async () => {
@@ -44,8 +34,8 @@ describe("HTTP routes", () => {
     expect(overviewHtml).toContain(
       '<div class="card-actions"><button class="share-link" type="button" data-share-url="/night/friday-dnd?password=dnd-secret"',
     );
-    expect(overviewHtml).toContain(
-      '<script src="/public/app.js" defer=""></script>',
+    expect(overviewHtml).toMatch(
+      /<script src="\/public\/app\.js\?v=[^"]+" defer=""><\/script>/,
     );
     const nightLogin = await server.request("/night/friday-dnd");
     expect(nightLogin.status).toBe(401);
@@ -66,7 +56,7 @@ describe("HTTP routes", () => {
     expect(detailHtml).not.toContain(">Previous<");
     expect(detailHtml).not.toContain("First snack duty");
     expect(detailHtml).toContain(
-      '<details class="schedule-column schedule-upcoming"><summary>Schedule</summary>',
+      '<details class="night-panel"><summary>Schedule</summary>',
     );
     expect(detailHtml).not.toContain('class="description"');
   });
@@ -105,9 +95,10 @@ describe("HTTP routes", () => {
       "/night/friday-dnd?password=dnd-secret",
     );
     const detailHtml = await detail.text();
-    expect(detailHtml).toContain("Sunday, 19 July");
+    expect(detailHtml).toContain('<html lang="nl-NL">');
+    expect(detailHtml).toContain("Zondag 19 juli");
     expect(detailHtml).toContain(
-      '<small class="original-date">Originally Friday, 17 July</small>',
+      '<small class="original-date">Originally Vrijdag 17 juli</small>',
     );
   });
 
@@ -132,7 +123,7 @@ describe("HTTP routes", () => {
 
   it("does not expose invalid active configuration details publicly", async () => {
     const server = await app();
-    const directory = directories.at(-1)!;
+    const directory = activeDirectory!;
     await writeFile(join(directory, "config.yml"), "invalid: true");
     const response = await server.request(
       "/night/friday-dnd?password=dnd-secret",
@@ -277,8 +268,11 @@ describe("HTTP routes", () => {
       });
       expect(noCsrf.status).toBe(403);
     } finally {
-      if (previousSecret === undefined) delete process.env.SESSION_SECRET;
-      else process.env.SESSION_SECRET = previousSecret;
+      if (previousSecret === undefined) {
+        delete process.env.SESSION_SECRET;
+      } else {
+        process.env.SESSION_SECRET = previousSecret;
+      }
     }
   });
 });

@@ -8,10 +8,12 @@ import type {
   OverrideConfig,
   ValidationIssue,
 } from "./types.js";
+import { isValidCalendarDate } from "../schedule/calendar-date.js";
+import { dateAlignsWithSchedule } from "../schedule/calculate-schedule.js";
 import {
-  calendarDaysBetween,
-  isValidCalendarDate,
-} from "../schedule/calendar-date.js";
+  activeScheduleOccupiesDate,
+  dateIsOccupied,
+} from "../schedule/date-occupancy.js";
 
 function issue(path: string, message: string): ValidationIssue {
   return { path, message };
@@ -22,17 +24,13 @@ function nightDateKey(gameNight: string, date: string): string {
   return `${gameNight}\0${date}`;
 }
 
-/** True when `date` falls on one of the night's recurring occurrences (on or after the anchor). */
-function alignsWithSchedule(night: GameNightConfig, date: string): boolean {
-  const days = calendarDaysBetween(night.anchorDate, date);
-  return days >= 0 && days % night.intervalDays === 0;
-}
-
 /** Indexes game nights by ID, keeping the first occurrence of any duplicate. */
 function indexGameNights(config: AppConfig): Map<string, GameNightConfig> {
   const nights = new Map<string, GameNightConfig>();
   for (const night of config.gameNights) {
-    if (!nights.has(night.id)) nights.set(night.id, night);
+    if (!nights.has(night.id)) {
+      nights.set(night.id, night);
+    }
   }
   return nights;
 }
@@ -133,7 +131,7 @@ function validateOverride(
   } else if (
     night &&
     isValidCalendarDate(night.anchorDate) &&
-    !alignsWithSchedule(night, override.date)
+    !dateAlignsWithSchedule(night, override.date)
   ) {
     errors.push(
       issue(
@@ -200,7 +198,7 @@ function validateDateOverride(
   } else if (
     night &&
     isValidCalendarDate(night.anchorDate) &&
-    !alignsWithSchedule(night, override.oldDate)
+    !dateAlignsWithSchedule(night, override.oldDate)
   ) {
     errors.push(
       issue(
@@ -273,11 +271,6 @@ function validateMovedDateConflicts(
   config: AppConfig,
   nightById: Map<string, GameNightConfig>,
 ): ValidationIssue[] {
-  const movedFrom = new Set(
-    config.dateOverrides.map((override) =>
-      nightDateKey(override.gameNight, override.oldDate),
-    ),
-  );
   const errors: ValidationIssue[] = [];
   config.dateOverrides.forEach((override, index) => {
     const night = nightById.get(override.gameNight);
@@ -288,11 +281,7 @@ function validateMovedDateConflicts(
     ) {
       return;
     }
-    const landsOnScheduledDate = alignsWithSchedule(night, override.newDate);
-    const scheduledDateIsMoved = movedFrom.has(
-      nightDateKey(override.gameNight, override.newDate),
-    );
-    if (landsOnScheduledDate && !scheduledDateIsMoved) {
+    if (activeScheduleOccupiesDate(config, night, override.newDate)) {
       errors.push(
         issue(
           `dateOverrides.${index}.newDate`,
@@ -306,11 +295,10 @@ function validateMovedDateConflicts(
 
 /** Checks one extra day: known night and a valid, free date. */
 function validateExtraDay(
+  config: AppConfig,
   extraDay: ExtraDayConfig,
   index: number,
   night: GameNightConfig | undefined,
-  movedFrom: Set<string>,
-  movedTo: Set<string>,
 ): ValidationIssue[] {
   const errors: ValidationIssue[] = [];
   if (!night) {
@@ -326,10 +314,11 @@ function validateExtraDay(
       issue(`extraDays.${index}.date`, "Must be a real ISO calendar date"),
     );
   } else if (night && isValidCalendarDate(night.anchorDate)) {
-    const key = nightDateKey(night.id, extraDay.date);
-    const clashesWithSchedule =
-      alignsWithSchedule(night, extraDay.date) && !movedFrom.has(key);
-    if (clashesWithSchedule || movedTo.has(key)) {
+    if (
+      dateIsOccupied(config, night, extraDay.date, {
+        includeExtraDays: false,
+      })
+    ) {
       errors.push(
         issue(
           `extraDays.${index}.date`,
@@ -346,26 +335,15 @@ function validateExtraDays(
   config: AppConfig,
   nightById: Map<string, GameNightConfig>,
 ): ValidationIssue[] {
-  const movedFrom = new Set(
-    config.dateOverrides.map((override) =>
-      nightDateKey(override.gameNight, override.oldDate),
-    ),
-  );
-  const movedTo = new Set(
-    config.dateOverrides.map((override) =>
-      nightDateKey(override.gameNight, override.newDate),
-    ),
-  );
   const errors: ValidationIssue[] = [];
   const seenKeys = new Set<string>();
   config.extraDays.forEach((extraDay, index) => {
     errors.push(
       ...validateExtraDay(
+        config,
         extraDay,
         index,
         nightById.get(extraDay.gameNight),
-        movedFrom,
-        movedTo,
       ),
     );
     const key = nightDateKey(extraDay.gameNight, extraDay.date);

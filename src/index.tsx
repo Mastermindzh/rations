@@ -16,6 +16,7 @@ import { authRoutes } from "./routes/auth.js";
 import { adminRoutes } from "./routes/admin.js";
 import { healthRoutes } from "./routes/health.js";
 import { imageRoutes } from "./routes/images.js";
+import { proposalRoutes } from "./routes/proposals.js";
 import { ErrorPage } from "./views/error-page.js";
 
 export function createApp(dataDirectory = configuredDataDirectory()) {
@@ -47,7 +48,9 @@ export function createApp(dataDirectory = configuredDataDirectory()) {
   });
   app.use("/admin", requireAdmin);
   app.use("/admin/*", async (c, next) => {
-    if (c.req.path === "/admin/login") return next();
+    if (c.req.path === "/admin/login") {
+      return next();
+    }
     return c.req.method === "GET"
       ? requireAdmin(c, next)
       : requireCsrf(c, next);
@@ -70,11 +73,26 @@ export function createApp(dataDirectory = configuredDataDirectory()) {
     await next();
     c.header("Cache-Control", "private, no-store");
   });
+  app.use(
+    "/proposals/*",
+    bodyLimit({
+      maxSize: 16 * 1024,
+      onError: (c) => c.text("Request body too large", 413),
+    }),
+  );
+  app.use(
+    "/night/*",
+    bodyLimit({
+      maxSize: 64 * 1024,
+      onError: (c) => c.text("Request body too large", 413),
+    }),
+  );
   app.get("/styles/*", serveStatic({ root: "./src" }));
   app.get("/public/*", serveStatic({ root: "./" }));
   app.route("/", imageRoutes(dataDirectory));
   app.route("/", healthRoutes(dataDirectory));
   app.route("/", authRoutes(dataDirectory));
+  app.route("/", proposalRoutes(dataDirectory));
   app.route("/", adminRoutes(dataDirectory));
   app.route("/", publicRoutes(dataDirectory));
 

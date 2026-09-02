@@ -1,5 +1,7 @@
 import type { AppConfig, GameNightConfig } from "../config/types.js";
 import type { GameNightOccurrence } from "../schedule/types.js";
+import type { Proposal } from "../proposals/types.js";
+import { withSharePassword } from "../services/share-access.js";
 import { Layout } from "./layout.js";
 import {
   formatTurnDate,
@@ -10,22 +12,36 @@ import {
   TurnRow,
 } from "./shared.js";
 
+type GameNightPageProps = {
+  config: AppConfig;
+  night: GameNightConfig;
+  schedule: { current: GameNightOccurrence; upcoming: GameNightOccurrence[] };
+  admin: boolean;
+  csrfToken?: string;
+  password?: string;
+  openProposals?: Proposal[];
+};
+
+const proposalLabel = (config: AppConfig, proposal: Proposal): string => {
+  if (proposal.type === "swap") {
+    return `Move ${formatTurnDate(proposal.targetDate, config.site.timezone)} → ${formatTurnDate(proposal.newDate, config.site.timezone)}`;
+  }
+  return proposal.title ?? "Proposed dates";
+};
+
 export const GameNightPage = ({
   config,
   night,
   schedule,
   admin,
   csrfToken,
-}: {
-  config: AppConfig;
-  night: GameNightConfig;
-  schedule: { current: GameNightOccurrence; upcoming: GameNightOccurrence[] };
-  admin: boolean;
-  csrfToken?: string;
-}) => {
+  password,
+  openProposals = [],
+}: GameNightPageProps) => {
   const person = config.people[schedule.current.personId]!;
   const next = schedule.upcoming[0];
   const nextPerson = next ? config.people[next.personId] : undefined;
+  const withPassword = (path: string) => withSharePassword(path, password);
   return (
     <Layout
       title={night.name}
@@ -65,7 +81,7 @@ export const GameNightPage = ({
         {nextPerson ? (
           <p class="next-callout">
             Next up <strong>{nextPerson.name}</strong> ·{" "}
-            {formatTurnDate(next!.date, config.site.timezone, false)}
+            {formatTurnDate(next!.date, config.site.timezone)}
             <OriginalTurnDate
               turn={next!}
               timezone={config.site.timezone}
@@ -74,20 +90,61 @@ export const GameNightPage = ({
           </p>
         ) : null}
       </section>
-      <section class="schedule-section">
-        <details class="schedule-column schedule-upcoming">
+      <div class="night-panels">
+        {openProposals.length ? (
+          <details class="night-panel" open>
+            <summary>
+              {openProposals.length} open date{" "}
+              {openProposals.length === 1 ? "proposal" : "proposals"}
+            </summary>
+            <ul class="panel-list">
+              {openProposals.map((proposal) => (
+                <li>{proposalLabel(config, proposal)}</li>
+              ))}
+            </ul>
+            <a
+              class="button button-accent"
+              href={withPassword(`/night/${night.id}/proposals`)}
+            >
+              Vote on these dates →
+            </a>
+          </details>
+        ) : null}
+        <details class="night-panel">
+          <summary>Suggest a change</summary>
+          <div class="night-actions-links">
+            <a
+              class="button"
+              href={withPassword(
+                `/night/${night.id}/date/${schedule.current.date}/propose-swap`,
+              )}
+            >
+              Propose moving this date
+            </a>
+            <a class="button" href={withPassword(`/night/${night.id}/propose`)}>
+              Propose new date(s)
+            </a>
+          </div>
+        </details>
+        <details class="night-panel">
           <summary>Schedule</summary>
           <ul class="turn-list">
             {schedule.upcoming.map((turn, index) => (
               <TurnRow
                 config={config}
                 turn={turn}
+                action={{
+                  href: withPassword(
+                    `/night/${night.id}/date/${turn.date}/propose-swap`,
+                  ),
+                  label: "Propose new date",
+                }}
                 {...(index === 0 ? { label: "Next" } : {})}
               />
             ))}
           </ul>
         </details>
-      </section>
+      </div>
     </Layout>
   );
 };

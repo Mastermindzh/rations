@@ -1,9 +1,11 @@
 import { DateTime } from "luxon";
 
-const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
+export const ISO_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 
 export function parseCalendarDate(value: string): DateTime {
-  if (!ISO_DATE.test(value)) throw new Error(`Invalid calendar date: ${value}`);
+  if (!ISO_DATE_PATTERN.test(value)) {
+    throw new Error(`Invalid calendar date: ${value}`);
+  }
   const date = DateTime.fromISO(value, { zone: "UTC" }).startOf("day");
   if (!date.isValid || date.toISODate() !== value) {
     throw new Error(`Invalid calendar date: ${value}`);
@@ -22,13 +24,16 @@ export function isValidCalendarDate(value: string): boolean {
 
 export function formatCalendarDate(date: DateTime): string {
   const value = date.toISODate();
-  if (!value) throw new Error("Cannot format invalid calendar date");
+  if (!value) {
+    throw new Error("Cannot format invalid calendar date");
+  }
   return value;
 }
 
 export function addCalendarDays(value: string, days: number): string {
-  if (!Number.isInteger(days))
+  if (!Number.isInteger(days)) {
     throw new Error("Calendar days must be an integer");
+  }
   return formatCalendarDate(parseCalendarDate(value).plus({ days }));
 }
 
@@ -49,8 +54,12 @@ export function todayInTimezone(
   now: DateTime<boolean> = DateTime.now(),
 ): string {
   const zoned = now.setZone(timezone);
-  if (!zoned.isValid) throw new Error(`Invalid timezone: ${timezone}`);
+  if (!zoned.isValid) {
+    throw new Error(`Invalid timezone: ${timezone}`);
+  }
   const value = zoned.toISODate();
-  if (!value) throw new Error("Unable to determine current date");
+  if (!value) {
+    throw new Error("Unable to determine current date");
+  }
   return value;
 }

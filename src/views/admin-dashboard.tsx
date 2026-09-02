@@ -4,6 +4,9 @@ import type {
   ValidationIssue,
 } from "../config/types.js";
 import type { GameNightOccurrence } from "../schedule/types.js";
+import type { Proposal } from "../proposals/types.js";
+import type { Notice } from "./notice.js";
+import { configuredLocale } from "../config/locale.js";
 import { Layout } from "./layout.js";
 import {
   CsrfField,
@@ -11,11 +14,26 @@ import {
   OriginalTurnDate,
   Portrait,
 } from "./shared.js";
+import { AdminProposalsSection } from "./admin-proposals.js";
+import { ConfigEditorForm, ValidationIssueList } from "./admin-editor.js";
+import { NoticeBanner } from "./notice-banner.js";
 
 type QuickNight = {
   night: GameNightConfig;
   current: GameNightOccurrence;
   next: GameNightOccurrence;
+};
+
+type AdminDashboardPageProps = {
+  config: AppConfig;
+  rawYaml: string;
+  version: string;
+  modifiedAt: Date;
+  csrfToken: string;
+  quickNights: QuickNight[];
+  proposals?: Proposal[];
+  validationErrors?: ValidationIssue[];
+  notice?: Notice;
 };
 
 export const AdminDashboardPage = ({
@@ -25,18 +43,10 @@ export const AdminDashboardPage = ({
   modifiedAt,
   csrfToken,
   quickNights,
+  proposals = [],
   validationErrors = [],
   notice,
-}: {
-  config: AppConfig;
-  rawYaml: string;
-  version: string;
-  modifiedAt: Date;
-  csrfToken: string;
-  quickNights: QuickNight[];
-  validationErrors?: ValidationIssue[];
-  notice?: { kind: "success" | "error" | "info"; message: string };
-}) => (
+}: AdminDashboardPageProps) => (
   <Layout
     title="Admin"
     siteTitle={config.site.title}
@@ -49,11 +59,7 @@ export const AdminDashboardPage = ({
         <h1>Control room</h1>
       </div>
     </div>
-    {notice ? (
-      <div class={`notice notice-${notice.kind}`} role="status">
-        {notice.message}
-      </div>
-    ) : null}
+    {notice ? <NoticeBanner notice={notice} /> : null}
 
     <section class="admin-section">
       <div class="section-heading">
@@ -66,7 +72,7 @@ export const AdminDashboardPage = ({
         {quickNights.map(({ night, current, next }) => {
           const person = config.people[current.personId]!;
           const nextPerson = config.people[next.personId]!;
-          const confirmation = `Delay ${person.name} once?\n\n${formatTurnDate(current.date, config.site.timezone, false)}: ${nextPerson.name} instead of ${person.name}\n${formatTurnDate(next.date, config.site.timezone, false)}: ${person.name} instead of ${nextPerson.name}`;
+          const confirmation = `Delay ${person.name} once?\n\n${formatTurnDate(current.date, config.site.timezone)}: ${nextPerson.name} instead of ${person.name}\n${formatTurnDate(next.date, config.site.timezone)}: ${person.name} instead of ${nextPerson.name}`;
           return (
             <article class="quick-card">
               <div class="quick-title">
@@ -79,15 +85,10 @@ export const AdminDashboardPage = ({
                   <div>
                     <span>
                       Current ·{" "}
-                      {formatTurnDate(
-                        current.date,
-                        config.site.timezone,
-                        false,
-                      )}
+                      {formatTurnDate(current.date, config.site.timezone)}
                       <OriginalTurnDate
                         turn={current}
                         timezone={config.site.timezone}
-                        includeWeekday={false}
                         reserveSpace
                       />
                     </span>
@@ -101,12 +102,10 @@ export const AdminDashboardPage = ({
                   <Portrait person={nextPerson} />
                   <div>
                     <span>
-                      Next ·{" "}
-                      {formatTurnDate(next.date, config.site.timezone, false)}
+                      Next · {formatTurnDate(next.date, config.site.timezone)}
                       <OriginalTurnDate
                         turn={next}
                         timezone={config.site.timezone}
-                        includeWeekday={false}
                         reserveSpace
                       />
                     </span>
@@ -214,7 +213,11 @@ export const AdminDashboardPage = ({
         })}
       </div>
     </section>
-
+    <AdminProposalsSection
+      config={config}
+      proposals={proposals}
+      csrfToken={csrfToken}
+    />
     <details
       class="admin-section editor-section"
       id="editor"
@@ -225,58 +228,24 @@ export const AdminDashboardPage = ({
       </summary>
       <span class="modified">
         Last modified{" "}
-        {modifiedAt.toLocaleString("en-GB", {
+        {modifiedAt.toLocaleString(configuredLocale(), {
           dateStyle: "medium",
           timeStyle: "short",
+          timeZone: config.site.timezone,
         })}
       </span>
       {validationErrors.length ? (
         <div class="notice notice-error" role="alert">
           <strong>Configuration needs attention</strong>
-          <ul class="validation-list">
-            {validationErrors.map((error) => (
-              <li>
-                <code>{error.path}</code>: {error.message}
-              </li>
-            ))}
-          </ul>
+          <ValidationIssueList issues={validationErrors} />
         </div>
       ) : null}
-      <form
-        method="post"
-        action="/admin/config/save"
-        class="editor-form"
-        data-editor-form
-      >
-        <CsrfField token={csrfToken} />
-        <input type="hidden" name="expectedVersion" value={version} />
-        <label class="sr-only" for="rawYaml">
-          Complete YAML configuration
-        </label>
-        <textarea
-          id="rawYaml"
-          name="rawYaml"
-          spellcheck={false}
-          data-yaml-editor
-        >
-          {rawYaml}
-        </textarea>
-        <div class="editor-actions">
-          <button class="button button-accent" type="submit">
-            Save configuration
-          </button>
-          <button
-            class="button"
-            type="submit"
-            formaction="/admin/config/validate"
-          >
-            Validate
-          </button>
-          <a class="button button-quiet" href="/admin#editor" data-reload>
-            Reload
-          </a>
-        </div>
-      </form>
+      <ConfigEditorForm
+        rawYaml={rawYaml}
+        version={version}
+        csrfToken={csrfToken}
+        saveLabel="Save configuration"
+      />
     </details>
   </Layout>
 );

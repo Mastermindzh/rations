@@ -1,4 +1,6 @@
 import type { FC, PropsWithChildren } from "hono/jsx";
+import { configuredLocale } from "../config/locale.js";
+import { appScriptUrl, appStyleUrl } from "./assets.js";
 
 type LayoutProps = PropsWithChildren<{
   title: string;
@@ -20,7 +22,7 @@ export const Layout: FC<LayoutProps> = ({
   mainClass,
   children,
 }) => (
-  <html lang="en">
+  <html lang={configuredLocale()}>
     <head>
       <meta charset="utf-8" />
       <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -38,8 +40,8 @@ export const Layout: FC<LayoutProps> = ({
         sizes="180x180"
         href="/public/apple-touch-icon.png"
       />
-      <link rel="stylesheet" href="/styles/app.css" />
-      {scripts ? <script src="/public/app.js" defer></script> : null}
+      <link rel="stylesheet" href={appStyleUrl} />
+      {scripts ? <script src={appScriptUrl} defer></script> : null}
     </head>
     <body>
       <div class="ambient ambient-one" aria-hidden="true"></div>

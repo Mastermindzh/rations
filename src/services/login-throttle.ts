@@ -27,8 +27,9 @@ export function createLoginThrottle(): LoginThrottle {
         (time) => time > now - WINDOW_MS,
       );
       record.failures.push(now);
-      if (record.failures.length >= MAX_FAILURES)
+      if (record.failures.length >= MAX_FAILURES) {
         record.blockedUntil = now + BLOCK_MS;
+      }
       attempts.set(ip, record);
     },
     reset(ip) {

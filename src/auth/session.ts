@@ -10,7 +10,9 @@ type Session = { expiresAt: number; csrfToken: string };
 
 function sessionSecret(): string {
   const secret = process.env.SESSION_SECRET;
-  if (secret && secret.length >= 32) return secret;
+  if (secret && secret.length >= 32) {
+    return secret;
+  }
   if (process.env.NODE_ENV === "production") {
     throw new Error(
       "SESSION_SECRET must be at least 32 characters in production",
@@ -21,7 +23,9 @@ function sessionSecret(): string {
 
 export async function readSession(c: Context<AppEnv>): Promise<Session | null> {
   const value = await getSignedCookie(c, sessionSecret(), COOKIE_NAME);
-  if (!value) return null;
+  if (!value) {
+    return null;
+  }
   try {
     const session = JSON.parse(
       Buffer.from(value, "base64url").toString("utf8"),
@@ -30,8 +34,9 @@ export async function readSession(c: Context<AppEnv>): Promise<Session | null> {
       !session.csrfToken ||
       !Number.isFinite(session.expiresAt) ||
       session.expiresAt <= Date.now()
-    )
+    ) {
       return null;
+    }
     return session;
   } catch {
     return null;

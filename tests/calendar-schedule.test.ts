@@ -127,6 +127,85 @@ describe("calendar dates and schedule resolution", () => {
     });
   });
 
+  it("assigns people after moving a later occurrence ahead of another", () => {
+    const config = fixtureConfig();
+    config.dateOverrides.push({
+      gameNight: "friday-dnd",
+      oldDate: "2026-07-31",
+      newDate: "2026-07-23",
+    });
+    const schedule = resolveNightSchedule(
+      config,
+      config.gameNights[0]!,
+      "2026-07-17",
+      3,
+    );
+
+    expect([schedule.current, ...schedule.upcoming]).toMatchObject([
+      { date: "2026-07-17", personId: "rick" },
+      {
+        date: "2026-07-23",
+        originalDate: "2026-07-31",
+        personId: "alice",
+      },
+      { date: "2026-07-24", personId: "bob" },
+      { date: "2026-08-07", personId: "rick" },
+    ]);
+  });
+
+  it("assigns people after moving an occurrence behind another", () => {
+    const config = fixtureConfig();
+    config.dateOverrides.push({
+      gameNight: "friday-dnd",
+      oldDate: "2026-07-24",
+      newDate: "2026-08-01",
+    });
+    const schedule = resolveNightSchedule(
+      config,
+      config.gameNights[0]!,
+      "2026-07-17",
+      3,
+    );
+
+    expect([schedule.current, ...schedule.upcoming]).toMatchObject([
+      { date: "2026-07-17", personId: "rick" },
+      { date: "2026-07-31", personId: "alice" },
+      {
+        date: "2026-08-01",
+        originalDate: "2026-07-24",
+        personId: "bob",
+      },
+      { date: "2026-08-07", personId: "rick" },
+    ]);
+  });
+
+  it("combines extra and moved nights before assigning the rotation", () => {
+    const config = fixtureConfig();
+    config.extraDays.push({ gameNight: "friday-dnd", date: "2026-07-20" });
+    config.dateOverrides.push({
+      gameNight: "friday-dnd",
+      oldDate: "2026-07-31",
+      newDate: "2026-07-23",
+    });
+    const schedule = resolveNightSchedule(
+      config,
+      config.gameNights[0]!,
+      "2026-07-17",
+      3,
+    );
+
+    expect([schedule.current, ...schedule.upcoming]).toMatchObject([
+      { date: "2026-07-17", personId: "rick" },
+      { date: "2026-07-20", personId: "alice", isExtra: true },
+      {
+        date: "2026-07-23",
+        originalDate: "2026-07-31",
+        personId: "bob",
+      },
+      { date: "2026-07-24", personId: "rick" },
+    ]);
+  });
+
   it("keeps assignment overrides attached to a moved occurrence", () => {
     const config = fixtureConfig();
     config.dateOverrides.push({
@@ -223,6 +302,21 @@ describe("calendar dates and schedule resolution", () => {
     expect(
       resolveRelevantTurn(config, config.gameNights[1]!, "2026-07-18").isExtra,
     ).toBe(false);
+  });
+
+  it("always keeps upcoming extra days beyond the render limit", () => {
+    const config = fixtureConfig();
+    config.extraDays.push({ gameNight: "friday-dnd", date: "2026-12-26" });
+    const schedule = resolveNightSchedule(
+      config,
+      config.gameNights[0]!,
+      "2026-07-17",
+    );
+    expect(
+      schedule.upcoming.some(
+        (turn) => turn.date === "2026-12-26" && turn.isExtra,
+      ),
+    ).toBe(true);
   });
 
   it("does not shift dates over DST boundaries", () => {

@@ -1,0 +1,3 @@
+export const MAX_PROPOSAL_CANDIDATES = 62;
+export const MAX_PROPOSALS_PER_NIGHT = 5;
+export const MAX_TOTAL_PROPOSALS = 100;
