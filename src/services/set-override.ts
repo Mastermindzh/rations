@@ -6,12 +6,20 @@ export function setOverride(
   date: string,
   personId: string,
   reason?: string,
+  isExtra = false,
 ): AppConfig {
-  const replacement: OverrideConfig = reason
-    ? { gameNight: gameNightId, date, person: personId, reason }
-    : { gameNight: gameNightId, date, person: personId };
+  const base: OverrideConfig = {
+    gameNight: gameNightId,
+    date,
+    person: personId,
+    ...(isExtra ? { isExtra: true } : {}),
+  };
+  const replacement: OverrideConfig = reason ? { ...base, reason } : base;
   const index = config.overrides.findIndex(
-    (item) => item.gameNight === gameNightId && item.date === date,
+    (item) =>
+      item.gameNight === gameNightId &&
+      item.date === date &&
+      Boolean(item.isExtra) === isExtra,
   );
   const overrides = [...config.overrides];
   if (index >= 0) {

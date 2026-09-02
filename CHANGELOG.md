@@ -5,6 +5,13 @@ All notable changes to Rations are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.1] - 2026-09-02
+
+### Fixed
+
+- The admin “Delay once” action now uses the next actual game night, including extra nights, while keeping the recurring-date editor independent.
+- Assignment swaps involving an extra night are stored separately from recurring-night overrides, leaving the configured people rotation and extra-night definition unchanged.
+
 ## [1.2.0] - 2026-09-02
 
 ### Added
@@ -21,7 +28,7 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 ### Changed
 
 - Snack duty is now assigned after recurring, moved, and extra nights are placed in chronological order. Moving a date no longer carries its old assignment or shuffles the people queue.
-- “Delay once” swaps the next two actual recurring nights, including when date moves have changed their order.
+- “Delay once” swaps the next two actual nights, including extra nights and recurring nights whose order changed because of a date move.
 - Long and eliminated proposal candidate lists can be collapsed or scrolled to keep proposal cards compact.
 - Shared view, form, storage, date, authentication, and image-format behavior has been consolidated into reusable modules.
 - Runtime and development dependencies have been updated, including Hono 4.13, TypeScript 7, and Node.js 26 type definitions.

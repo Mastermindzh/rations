@@ -1,12 +1,9 @@
 import type { AppConfig } from "../config/types.js";
+import type { GameNightOccurrence } from "../schedule/types.js";
 import { changeConfig } from "../config/file.js";
 import { personName, requireGameNight } from "../config/lookups.js";
 import { ConfigError } from "../config/config-error.js";
-import { turnNumberForDate } from "../schedule/calculate-schedule.js";
-import {
-  resolveNightSchedule,
-  resolveTurnNumber,
-} from "../schedule/resolve-turn.js";
+import { resolveNightSchedule } from "../schedule/resolve-turn.js";
 import { setOverride } from "./set-override.js";
 
 type DelayOnceInput = {
@@ -27,29 +24,14 @@ export function applyDelayOnce(
   currentDate: string,
 ): AppConfig {
   const night = requireGameNight(config, gameNightId);
-  const current = resolveTurnNumber(
-    config,
-    night,
-    turnNumberForDate(night, currentDate),
-  );
-  const currentScheduledDate = current.originalDate ?? current.date;
-  if (currentScheduledDate !== currentDate) {
-    throw new ConfigError(
-      "The submitted turn is no longer current",
-      "INVALID_DELAY",
-    );
-  }
   const chronologicalNights = resolveNightSchedule(
     config,
     night,
-    current.date,
+    currentDate,
     1,
-    false,
   );
-  if (
-    (chronologicalNights.current.originalDate ??
-      chronologicalNights.current.date) !== currentScheduledDate
-  ) {
+  const current = chronologicalNights.current;
+  if (current.date !== currentDate) {
     throw new ConfigError(
       "The submitted turn is no longer current",
       "INVALID_DELAY",
@@ -64,19 +46,33 @@ export function applyDelayOnce(
   }
   const currentName = personName(config, current.personId);
   const nextName = personName(config, next.personId);
-  let updated = setOverride(
+  let updated = setOccurrenceOverride(
     config,
-    night.id,
-    currentScheduledDate,
+    current,
     next.personId,
     `${currentName} delayed once`,
   );
-  updated = setOverride(
+  updated = setOccurrenceOverride(
     updated,
-    night.id,
-    next.originalDate ?? next.date,
+    next,
     current.personId,
     `Swapped with ${nextName}`,
   );
   return updated;
+}
+
+function setOccurrenceOverride(
+  config: AppConfig,
+  occurrence: GameNightOccurrence,
+  personId: string,
+  reason: string,
+): AppConfig {
+  return setOverride(
+    config,
+    occurrence.gameNightId,
+    occurrence.originalDate ?? occurrence.date,
+    personId,
+    reason,
+    occurrence.isExtra,
+  );
 }

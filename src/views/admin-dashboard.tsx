@@ -10,6 +10,7 @@ import { configuredLocale } from "../config/locale.js";
 import { Layout } from "./layout.js";
 import {
   CsrfField,
+  ExtraBadge,
   formatTurnDate,
   OriginalTurnDate,
   Portrait,
@@ -22,6 +23,7 @@ type QuickNight = {
   night: GameNightConfig;
   current: GameNightOccurrence;
   next: GameNightOccurrence;
+  reschedule: GameNightOccurrence;
 };
 
 type AdminDashboardPageProps = {
@@ -69,7 +71,7 @@ export const AdminDashboardPage = ({
         </div>
       </div>
       <div class="quick-grid">
-        {quickNights.map(({ night, current, next }) => {
+        {quickNights.map(({ night, current, next, reschedule }) => {
           const person = config.people[current.personId]!;
           const nextPerson = config.people[next.personId]!;
           const confirmation = `Delay ${person.name} once?\n\n${formatTurnDate(current.date, config.site.timezone)}: ${nextPerson.name} instead of ${person.name}\n${formatTurnDate(next.date, config.site.timezone)}: ${person.name} instead of ${nextPerson.name}`;
@@ -86,6 +88,7 @@ export const AdminDashboardPage = ({
                     <span>
                       Current ·{" "}
                       {formatTurnDate(current.date, config.site.timezone)}
+                      <ExtraBadge turn={current} />
                       <OriginalTurnDate
                         turn={current}
                         timezone={config.site.timezone}
@@ -103,6 +106,7 @@ export const AdminDashboardPage = ({
                   <div>
                     <span>
                       Next · {formatTurnDate(next.date, config.site.timezone)}
+                      <ExtraBadge turn={next} />
                       <OriginalTurnDate
                         turn={next}
                         timezone={config.site.timezone}
@@ -124,7 +128,7 @@ export const AdminDashboardPage = ({
                   <input
                     type="hidden"
                     name="currentDate"
-                    value={current.originalDate ?? current.date}
+                    value={current.date}
                   />
                   <input type="hidden" name="returnTo" value="/admin" />
                   <button
@@ -153,7 +157,7 @@ export const AdminDashboardPage = ({
                 <input
                   type="hidden"
                   name="oldDate"
-                  value={current.originalDate ?? current.date}
+                  value={reschedule.originalDate ?? reschedule.date}
                 />
                 <label for={`next-date-${night.id}`}>Next game date</label>
                 <div class="reschedule-controls">
@@ -161,13 +165,13 @@ export const AdminDashboardPage = ({
                     id={`next-date-${night.id}`}
                     name="newDate"
                     type="date"
-                    value={current.date}
+                    value={reschedule.date}
                     required
                   />
                   <button class="button" type="submit">
                     Save date
                   </button>
-                  {current.originalDate ? (
+                  {reschedule.originalDate ? (
                     <button
                       class="button button-quiet"
                       type="submit"

@@ -59,6 +59,7 @@ export const appConfigSchema = z.strictObject({
           .string()
           .regex(ISO_DATE_PATTERN, "Must be an ISO date (YYYY-MM-DD)"),
         person: z.string(),
+        isExtra: z.boolean().optional(),
         reason: optionalNonEmpty,
       }),
     )

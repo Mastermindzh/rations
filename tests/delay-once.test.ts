@@ -71,7 +71,7 @@ describe("delay once", () => {
       { gameNight: "friday-dnd", oldDate: "2026-07-17", newDate: "2026-07-19" },
       { gameNight: "friday-dnd", oldDate: "2026-07-24", newDate: "2026-07-26" },
     ];
-    const updated = applyDelayOnce(config, "friday-dnd", "2026-07-17");
+    const updated = applyDelayOnce(config, "friday-dnd", "2026-07-19");
     expect(updated.overrides).toEqual([
       expect.objectContaining({ date: "2026-07-17", person: "alice" }),
       expect.objectContaining({ date: "2026-07-24", person: "rick" }),
@@ -93,7 +93,7 @@ describe("delay once", () => {
       newDate: "2026-07-23",
     });
 
-    const updated = applyDelayOnce(config, "friday-dnd", "2026-07-31");
+    const updated = applyDelayOnce(config, "friday-dnd", "2026-07-23");
 
     expect(updated.overrides).toEqual([
       expect.objectContaining({ date: "2026-07-31", person: "bob" }),
@@ -109,6 +109,107 @@ describe("delay once", () => {
     expect(
       resolveRelevantTurn(updated, updated.gameNights[0]!, "2026-07-24"),
     ).toMatchObject({ date: "2026-07-24", personId: "alice" });
+  });
+
+  it("swaps a regular night with the next extra night", () => {
+    const config = fixtureConfig();
+    config.extraDays.push({
+      gameNight: "friday-dnd",
+      date: "2026-07-20",
+      reason: "Bonus session",
+    });
+
+    const updated = applyDelayOnce(config, "friday-dnd", "2026-07-17");
+    const night = updated.gameNights[0]!;
+
+    expect(updated.extraDays[0]).toEqual(config.extraDays[0]);
+    expect(updated.overrides).toEqual([
+      expect.objectContaining({
+        date: "2026-07-17",
+        person: "alice",
+      }),
+      expect.objectContaining({
+        date: "2026-07-20",
+        person: "rick",
+        isExtra: true,
+      }),
+    ]);
+    expect(resolveRelevantTurn(updated, night, "2026-07-17")).toMatchObject({
+      date: "2026-07-17",
+      personId: "alice",
+    });
+    expect(resolveRelevantTurn(updated, night, "2026-07-18")).toMatchObject({
+      date: "2026-07-20",
+      personId: "rick",
+      isExtra: true,
+      isOverride: true,
+    });
+    expect(resolveRelevantTurn(updated, night, "2026-07-21")).toMatchObject({
+      date: "2026-07-24",
+      personId: "bob",
+    });
+  });
+
+  it("swaps an extra current night with the next occurrence", () => {
+    const config = fixtureConfig();
+    config.extraDays.push({ gameNight: "friday-dnd", date: "2026-07-20" });
+
+    const updated = applyDelayOnce(config, "friday-dnd", "2026-07-20");
+    const night = updated.gameNights[0]!;
+
+    expect(updated.overrides).toEqual([
+      expect.objectContaining({
+        date: "2026-07-20",
+        person: "bob",
+        isExtra: true,
+      }),
+      expect.objectContaining({ date: "2026-07-24", person: "alice" }),
+    ]);
+    expect(resolveRelevantTurn(updated, night, "2026-07-20")).toMatchObject({
+      date: "2026-07-20",
+      personId: "bob",
+      isExtra: true,
+    });
+    expect(resolveRelevantTurn(updated, night, "2026-07-21")).toMatchObject({
+      date: "2026-07-24",
+      personId: "alice",
+    });
+  });
+
+  it("distinguishes an extra night from a recurring date moved away", () => {
+    const config = fixtureConfig();
+    config.dateOverrides.push({
+      gameNight: "friday-dnd",
+      oldDate: "2026-07-24",
+      newDate: "2026-07-26",
+    });
+    config.extraDays.push({ gameNight: "friday-dnd", date: "2026-07-24" });
+
+    const updated = applyDelayOnce(config, "friday-dnd", "2026-07-24");
+    const night = updated.gameNights[0]!;
+
+    expect(updated.overrides).toHaveLength(2);
+    expect(updated.overrides[0]).toMatchObject({
+      date: "2026-07-24",
+      person: "bob",
+      isExtra: true,
+    });
+    expect(updated.overrides[1]).toMatchObject({
+      date: "2026-07-24",
+      person: "alice",
+    });
+    expect(updated.overrides[1]!.isExtra).toBeUndefined();
+    expect(resolveRelevantTurn(updated, night, "2026-07-24")).toMatchObject({
+      date: "2026-07-24",
+      personId: "bob",
+      isExtra: true,
+    });
+    expect(resolveRelevantTurn(updated, night, "2026-07-25")).toMatchObject({
+      date: "2026-07-26",
+      originalDate: "2026-07-24",
+      personId: "alice",
+      isExtra: false,
+    });
   });
 
   it("rejects one-person rotations and unknown game nights", () => {

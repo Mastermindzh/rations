@@ -47,7 +47,10 @@ export function resolveTurnNumber(
 ): GameNightOccurrence {
   const scheduledDate = turnDate(night, turnNumber);
   const override = config.overrides.find(
-    (item) => item.gameNight === night.id && item.date === scheduledDate,
+    (item) =>
+      item.gameNight === night.id &&
+      item.date === scheduledDate &&
+      !item.isExtra,
   );
   const dateOverride = config.dateOverrides.find(
     (item) => item.gameNight === night.id && item.oldDate === scheduledDate,
@@ -78,13 +81,19 @@ export function resolveExtraDay(
   extraDay: ExtraDayConfig,
 ): GameNightOccurrence {
   const rotationIndex = rotationIndexBeforeDate(config, night, extraDay.date);
-  const personId = basePersonForTurn(night, rotationIndex);
+  const originalPersonId = basePersonForTurn(night, rotationIndex);
+  const override = config.overrides.find(
+    (item) =>
+      item.gameNight === night.id &&
+      item.date === extraDay.date &&
+      item.isExtra,
+  );
   const base: GameNightOccurrence = {
     gameNightId: night.id,
     date: extraDay.date,
-    personId,
-    originalPersonId: personId,
-    isOverride: false,
+    personId: override?.person ?? originalPersonId,
+    originalPersonId,
+    isOverride: Boolean(override),
     isExtra: true,
     turnNumber: -1,
   };
@@ -101,7 +110,7 @@ export function resolveRelevantTurn(
 }
 
 // The current occurrence plus the next `upcomingCount`. Pass includeExtraDays
-// false for the rotation-only view used by the admin quick actions.
+// false when a caller explicitly needs a recurring-only projection.
 export function resolveNightSchedule(
   config: AppConfig,
   night: GameNightConfig,

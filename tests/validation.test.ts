@@ -92,6 +92,55 @@ describe("configuration validation", () => {
     expect(messages(config)).toContain("Only one override");
   });
 
+  it("accepts an assignment override for an extra night", () => {
+    const config = fixtureConfig();
+    config.extraDays = [{ gameNight: "friday-dnd", date: "2026-07-20" }];
+    config.overrides = [
+      {
+        gameNight: "friday-dnd",
+        date: "2026-07-20",
+        person: "alice",
+        isExtra: true,
+      },
+    ];
+    expect(messages(config)).toBe("");
+  });
+
+  it("rejects an extra-night override without that extra night", () => {
+    const config = fixtureConfig();
+    config.overrides = [
+      {
+        gameNight: "friday-dnd",
+        date: "2026-07-20",
+        person: "alice",
+        isExtra: true,
+      },
+    ];
+    expect(messages(config)).toContain("does not identify an extra night");
+  });
+
+  it("distinguishes overrides for an extra and moved recurring night", () => {
+    const config = fixtureConfig();
+    config.dateOverrides = [
+      {
+        gameNight: "friday-dnd",
+        oldDate: "2026-07-24",
+        newDate: "2026-07-26",
+      },
+    ];
+    config.extraDays = [{ gameNight: "friday-dnd", date: "2026-07-24" }];
+    config.overrides = [
+      {
+        gameNight: "friday-dnd",
+        date: "2026-07-24",
+        person: "bob",
+        isExtra: true,
+      },
+      { gameNight: "friday-dnd", date: "2026-07-24", person: "alice" },
+    ];
+    expect(messages(config)).toBe("");
+  });
+
   it("rejects overrides for people outside the game night", () => {
     const config = fixtureConfig();
     config.overrides = [

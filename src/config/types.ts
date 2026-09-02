@@ -27,6 +27,7 @@ export type OverrideConfig = {
   gameNight: string;
   date: string;
   person: string;
+  isExtra?: boolean;
   reason?: string;
 };
 

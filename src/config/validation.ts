@@ -103,44 +103,78 @@ function validateOverride(
   night: GameNightConfig | undefined,
   config: AppConfig,
 ): ValidationIssue[] {
-  const errors: ValidationIssue[] = [];
-  if (!night) {
-    errors.push(
-      issue(
-        `overrides.${index}.gameNight`,
-        `Unknown game night: ${override.gameNight}`,
-      ),
-    );
+  return [
+    ...validateOverrideNight(override, index, night),
+    ...validateOverridePerson(override, index, night, config),
+    ...validateOverrideDate(override, index, night, config),
+  ];
+}
+
+function validateOverrideNight(
+  override: OverrideConfig,
+  index: number,
+  night: GameNightConfig | undefined,
+): ValidationIssue[] {
+  if (night) {
+    return [];
   }
+  return [
+    issue(
+      `overrides.${index}.gameNight`,
+      `Unknown game night: ${override.gameNight}`,
+    ),
+  ];
+}
+
+function validateOverridePerson(
+  override: OverrideConfig,
+  index: number,
+  night: GameNightConfig | undefined,
+  config: AppConfig,
+): ValidationIssue[] {
+  const path = `overrides.${index}.person`;
   if (!config.people[override.person]) {
-    errors.push(
-      issue(`overrides.${index}.person`, `Unknown person: ${override.person}`),
-    );
-  } else if (night && !night.people.includes(override.person)) {
-    errors.push(
-      issue(
-        `overrides.${index}.person`,
-        `${override.person} does not belong to ${night.id}`,
-      ),
-    );
+    return [issue(path, `Unknown person: ${override.person}`)];
   }
+  if (night && !night.people.includes(override.person)) {
+    return [issue(path, `${override.person} does not belong to ${night.id}`)];
+  }
+  return [];
+}
+
+function validateOverrideDate(
+  override: OverrideConfig,
+  index: number,
+  night: GameNightConfig | undefined,
+  config: AppConfig,
+): ValidationIssue[] {
+  const path = `overrides.${index}.date`;
   if (!isValidCalendarDate(override.date)) {
-    errors.push(
-      issue(`overrides.${index}.date`, "Must be a real ISO calendar date"),
-    );
-  } else if (
-    night &&
-    isValidCalendarDate(night.anchorDate) &&
-    !dateAlignsWithSchedule(night, override.date)
-  ) {
-    errors.push(
-      issue(
-        `overrides.${index}.date`,
-        `Date does not align with ${night.id}'s schedule`,
-      ),
-    );
+    return [issue(path, "Must be a real ISO calendar date")];
   }
-  return errors;
+  if (override.isExtra) {
+    const identifiesExtraNight = config.extraDays.some(
+      (extraDay) =>
+        extraDay.gameNight === override.gameNight &&
+        extraDay.date === override.date,
+    );
+    return identifiesExtraNight
+      ? []
+      : [
+          issue(
+            path,
+            `Date does not identify an extra night for ${override.gameNight}`,
+          ),
+        ];
+  }
+  if (
+    !night ||
+    !isValidCalendarDate(night.anchorDate) ||
+    dateAlignsWithSchedule(night, override.date)
+  ) {
+    return [];
+  }
+  return [issue(path, `Date does not align with ${night.id}'s schedule`)];
 }
 
 /** Checks all snack-assignment overrides and rejects duplicates per night and date. */
@@ -159,7 +193,7 @@ function validateOverrides(
         config,
       ),
     );
-    const key = nightDateKey(override.gameNight, override.date);
+    const key = `${nightDateKey(override.gameNight, override.date)}\0${override.isExtra ? "extra" : "recurring"}`;
     if (seenKeys.has(key)) {
       errors.push(
         issue(
