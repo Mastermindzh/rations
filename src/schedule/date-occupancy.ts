@@ -2,6 +2,7 @@ import type { AppConfig, GameNightConfig } from "../config/types.js";
 import { dateAlignsWithSchedule } from "./calculate-schedule.js";
 
 export type DateOccupancyOptions = {
+  includeSkippedDays?: boolean;
   includeExtraDays?: boolean;
   includeMovedToDates?: boolean;
 };
@@ -14,7 +15,21 @@ export function activeScheduleOccupiesDate(
   const wasMovedAway = config.dateOverrides.some(
     (override) => override.gameNight === night.id && override.oldDate === date,
   );
-  return dateAlignsWithSchedule(night, date) && !wasMovedAway;
+  return (
+    dateAlignsWithSchedule(night, date) &&
+    !wasMovedAway &&
+    !dateIsSkipped(config, night, date)
+  );
+}
+
+export function dateIsSkipped(
+  config: AppConfig,
+  night: GameNightConfig,
+  date: string,
+): boolean {
+  return config.skippedDays.some(
+    (item) => item.gameNight === night.id && item.date === date,
+  );
 }
 
 export function createDateOccupancyChecker(
@@ -40,9 +55,11 @@ export function createDateOccupancyChecker(
   const movedFromDates = new Set(overrides.map((item) => item.oldDate));
 
   return (date) =>
-    extraDates.has(date) ||
-    movedToDates.has(date) ||
-    (dateAlignsWithSchedule(night, date) && !movedFromDates.has(date));
+    dateIsSkipped(config, night, date)
+      ? (options.includeSkippedDays ?? false)
+      : extraDates.has(date) ||
+        movedToDates.has(date) ||
+        (dateAlignsWithSchedule(night, date) && !movedFromDates.has(date));
 }
 
 export function dateIsOccupied(

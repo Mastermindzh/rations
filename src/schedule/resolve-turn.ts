@@ -4,6 +4,7 @@ import type {
   GameNightConfig,
 } from "../config/types.js";
 import type { GameNightOccurrence } from "./types.js";
+import { dateIsSkipped } from "./date-occupancy.js";
 import {
   basePersonForTurn,
   turnDate,
@@ -33,7 +34,10 @@ function rotationIndexBeforeDate(
   return (
     turnNumberForDate(night, date) +
     movedOccurrenceAdjustment +
-    extraOccurrences
+    extraOccurrences -
+    config.skippedDays.filter(
+      (item) => item.gameNight === night.id && item.date < date,
+    ).length
   );
 }
 
@@ -145,7 +149,11 @@ function resolveFutureTurns(
   const firstScheduledTurn = turnNumberForDate(night, currentDate);
   const turnNumbers = new Set<number>();
 
-  for (let offset = 0; offset < count + dateOverrides.length + 1; offset += 1) {
+  for (
+    let offset = 0;
+    offset < count + dateOverrides.length + config.skippedDays.length + 1;
+    offset += 1
+  ) {
     turnNumbers.add(firstScheduledTurn + offset);
   }
   for (const override of dateOverrides) {
@@ -162,7 +170,11 @@ function resolveFutureTurns(
     : [];
 
   return [...recurring, ...extra]
-    .filter((turn) => turn.date >= currentDate)
+    .filter(
+      (turn) =>
+        turn.date >= currentDate &&
+        !dateIsSkipped(config, night, turn.originalDate ?? turn.date),
+    )
     .sort(
       (left, right) =>
         left.date.localeCompare(right.date) ||

@@ -13,7 +13,9 @@ import {
   eliminatedCandidates,
   newProposalId,
 } from "./helpers.js";
-import { dateIsOccupied } from "../schedule/date-occupancy.js";
+import { dateIsOccupied, dateIsSkipped } from "../schedule/date-occupancy.js";
+import { applySkipNight } from "../services/skip-night.js";
+import { resolveRelevantTurn } from "../schedule/resolve-turn.js";
 import type { Proposal } from "./types.js";
 import type { VoteInput } from "./helpers.js";
 import {
@@ -120,7 +122,7 @@ export async function createSwapProposal(
     !isValidCalendarDate(input.newDate) ||
     input.newDate < today ||
     input.newDate === input.targetDate ||
-    dateIsOccupied(config, night, input.newDate)
+    dateIsOccupied(config, night, input.newDate, { includeSkippedDays: true })
   ) {
     throw new ConfigError(
       "The proposed new date is not available",
@@ -136,11 +138,42 @@ export async function createSwapProposal(
     createdBy: input.createdBy,
     createdAt: new Date().toISOString(),
     targetDate: input.targetDate,
+    originalDate:
+      config.dateOverrides.find(
+        (item) =>
+          item.gameNight === night.id && item.newDate === input.targetDate,
+      )?.oldDate ?? input.targetDate,
     newDate: input.newDate,
     votes: [],
     ...(input.title ? { title: input.title } : {}),
   };
   await appendProposal(dataDirectory, proposal);
+  return id;
+}
+
+export async function createSkipProposal(
+  dataDirectory: string,
+  input: Omit<CreateSwapProposalInput, "newDate">,
+): Promise<string> {
+  const { config } = await loadConfig(dataDirectory);
+  const night = requireGameNight(config, input.gameNightId);
+  if (!night.people.includes(input.createdBy)) {
+    throw new ConfigError("Unknown proposer", "INVALID_PROPOSAL");
+  }
+  applySkipNight(config, night.id, input.targetDate);
+  const turn = resolveRelevantTurn(config, night, input.targetDate);
+  const id = newProposalId("skip");
+  await appendProposal(dataDirectory, {
+    id,
+    type: "skip",
+    gameNight: night.id,
+    createdBy: input.createdBy,
+    createdAt: new Date().toISOString(),
+    targetDate: input.targetDate,
+    originalDate: turn.originalDate ?? turn.date,
+    votes: [],
+    ...(input.title ? { title: input.title } : {}),
+  });
   return id;
 }
 
@@ -157,15 +190,10 @@ export async function createPlannerProposal(
   }
 
   if (new Set(input.candidates).size !== input.candidates.length) {
-    throw new ConfigError(
-      "Candidate dates must be unique",
-      "INVALID_PROPOSAL",
-    );
+    throw new ConfigError("Candidate dates must be unique", "INVALID_PROPOSAL");
   }
   if (
-    input.candidates.some(
-      (date) => !isValidCalendarDate(date) || date < today,
-    )
+    input.candidates.some((date) => !isValidCalendarDate(date) || date < today)
   ) {
     throw new ConfigError(
       "Candidate dates must be valid future dates",
@@ -222,9 +250,11 @@ export async function castVote(
       throw new ConfigError("Unknown voter", "INVALID_VOTE");
     }
     const validDate =
-      proposal.type === "swap"
-        ? input.date === proposal.newDate
-        : proposal.candidates.includes(input.date);
+      proposal.type === "skip"
+        ? input.date === proposal.targetDate
+        : proposal.type === "swap"
+          ? input.date === proposal.newDate
+          : proposal.candidates.includes(input.date);
     if (!validDate) {
       throw new ConfigError("Unknown date", "INVALID_VOTE");
     }
@@ -253,7 +283,40 @@ export async function approveProposal(
   const night = requireGameNight(loaded.config, proposal.gameNight);
 
   // Apply to the schedule first; only remove the proposal after that succeeds.
-  if (proposal.type === "swap") {
+  if (proposal.type === "skip") {
+    if (!dateIsSkipped(loaded.config, night, proposal.originalDate)) {
+      const turn = resolveRelevantTurn(
+        loaded.config,
+        night,
+        proposal.targetDate,
+      );
+      if (
+        turn.date !== proposal.targetDate ||
+        (turn.originalDate ?? turn.date) !== proposal.originalDate
+      ) {
+        throw new ConfigError(
+          "The proposed night has changed; propose the skip again",
+          "INVALID_PROPOSAL",
+        );
+      }
+      await changeConfig(dataDirectory, loaded.version, (config) =>
+        applySkipNight(config, night.id, proposal.targetDate, proposal.title),
+      );
+    }
+  } else if (proposal.type === "swap") {
+    if (
+      dateIsSkipped(
+        loaded.config,
+        night,
+        proposal.originalDate ?? proposal.targetDate,
+      ) ||
+      dateIsSkipped(loaded.config, night, proposal.newDate)
+    ) {
+      throw new ConfigError(
+        "This proposal references a skipped night",
+        "INVALID_PROPOSAL",
+      );
+    }
     const targetExists = dateIsOccupied(
       loaded.config,
       night,
@@ -287,7 +350,8 @@ export async function approveProposal(
     const today = todayInTimezone(loaded.config.site.timezone);
     const eliminated = eliminatedCandidates(proposal);
     const requested =
-      input.dates ?? proposal.candidates.filter((date) => !eliminated.has(date));
+      input.dates ??
+      proposal.candidates.filter((date) => !eliminated.has(date));
     if (requested.some((date) => !proposal.candidates.includes(date))) {
       throw new ConfigError(
         "An approval date is not part of this proposal",

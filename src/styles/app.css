@@ -392,6 +392,14 @@ h2 {
   flex-wrap: wrap;
   gap: 0.75rem;
 }
+.proposal-summary {
+  display: flex;
+  align-items: baseline;
+  gap: 0.65rem;
+}
+.proposal-summary .badge {
+  flex-shrink: 0;
+}
 .proposal-grid {
   display: grid;
   gap: 1rem;
@@ -1062,4 +1070,9 @@ input {
     transition-duration: 0.01ms !important;
     animation-duration: 0.01ms !important;
   }
+}
+.turn-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1rem;
 }

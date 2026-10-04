@@ -10,6 +10,11 @@ export const SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
 const nonEmpty = z.string().trim().min(1, "Must not be empty");
 const optionalNonEmpty = nonEmpty.optional();
+const dayAdjustment = z.strictObject({
+  gameNight: z.string(),
+  date: z.string().regex(ISO_DATE_PATTERN, "Must be an ISO date (YYYY-MM-DD)"),
+  reason: optionalNonEmpty,
+});
 
 export const appConfigSchema = z.strictObject({
   site: z.strictObject({
@@ -77,15 +82,6 @@ export const appConfigSchema = z.strictObject({
       }),
     )
     .default([]),
-  extraDays: z
-    .array(
-      z.strictObject({
-        gameNight: z.string(),
-        date: z
-          .string()
-          .regex(ISO_DATE_PATTERN, "Must be an ISO date (YYYY-MM-DD)"),
-        reason: optionalNonEmpty,
-      }),
-    )
-    .default([]),
+  extraDays: z.array(dayAdjustment).default([]),
+  skippedDays: z.array(dayAdjustment).default([]),
 });

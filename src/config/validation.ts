@@ -394,6 +394,53 @@ function validateExtraDays(
   return errors;
 }
 
+function validateSkippedDays(
+  config: AppConfig,
+  nights: Map<string, GameNightConfig>,
+): ValidationIssue[] {
+  const errors: ValidationIssue[] = [];
+  const seen = new Set<string>();
+  config.skippedDays.forEach((day, index) => {
+    const path = `skippedDays.${index}`;
+    const night = nights.get(day.gameNight);
+    const key = nightDateKey(day.gameNight, day.date);
+    if (!night) {
+      errors.push(issue(path, `Unknown game night: ${day.gameNight}`));
+    }
+    if (!isValidCalendarDate(day.date)) {
+      errors.push(issue(path, "Must be a real ISO calendar date"));
+    } else if (
+      night &&
+      isValidCalendarDate(night.anchorDate) &&
+      !dateAlignsWithSchedule(night, day.date)
+    ) {
+      errors.push(issue(path, "Date must align with the recurring schedule"));
+    }
+    if (seen.has(key)) {
+      errors.push(issue(path, "Duplicate skipped day"));
+    }
+    seen.add(key);
+    if (
+      config.dateOverrides.some(
+        (item) =>
+          item.gameNight === day.gameNight &&
+          (item.oldDate === day.date || item.newDate === day.date),
+      ) ||
+      config.overrides.some(
+        (item) => item.gameNight === day.gameNight && item.date === day.date,
+      ) ||
+      config.extraDays.some(
+        (item) => item.gameNight === day.gameNight && item.date === day.date,
+      )
+    ) {
+      errors.push(
+        issue(path, "Skipped day conflicts with an existing adjustment"),
+      );
+    }
+  });
+  return errors;
+}
+
 /** Fully validates untrusted input: schema first, then cross-field domain rules. */
 export function validateConfig(
   value: unknown,
@@ -421,6 +468,7 @@ export function validateConfig(
     ...validateDateOverrides(config, nightById),
     ...validateMovedDateConflicts(config, nightById),
     ...validateExtraDays(config, nightById),
+    ...validateSkippedDays(config, nightById),
   ];
 
   return errors.length > 0

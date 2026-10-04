@@ -2,10 +2,12 @@ import type { AppConfig, GameNightConfig } from "../config/types.js";
 import { personName } from "../config/lookups.js";
 import type { Proposal, ProposalVote } from "../proposals/types.js";
 import type { ShortcutKind } from "../schedule/date-ranges.js";
-import { aggregateVotes, eliminatedCandidates } from "../proposals/helpers.js";
+import { aggregateVotes, eliminatedCandidates, proposalIsCurrent } from "../proposals/helpers.js";
 import { Layout } from "./layout.js";
 import { formatTurnDate, HiddenDateDisclosure } from "./shared.js";
 import { ErrorNotice } from "./notice-banner.js";
+import { SkipPreview } from "./skip-preview.js";
+import { withSharePassword } from "../services/share-access.js";
 
 const PersonSelect = ({
   config,
@@ -28,29 +30,43 @@ const PersonSelect = ({
   </select>
 );
 
-export const SwapProposePage = ({
+export const OccurrenceProposePage = ({
   config,
   night,
   targetDate,
   password,
   error,
+  skip = false,
 }: {
   config: AppConfig;
   night: GameNightConfig;
   targetDate: string;
   password?: string;
   error?: string;
+  skip?: boolean;
 }) => (
-  <Layout title="Propose a swap" siteTitle={config.site.title} scripts>
-    <a class="back-link" href={`/night/${night.id}`}>
+  <Layout
+    title={skip ? "Propose a skip" : "Propose a swap"}
+    siteTitle={config.site.title}
+    scripts
+  >
+    <a
+      class="back-link"
+      href={withSharePassword(`/night/${night.id}`, password)}
+    >
       ← Back to {night.name}
     </a>
-    <h1>Propose a new date</h1>
+    <h1>{skip ? "Propose skipping a night" : "Propose a new date"}</h1>
     <p>
-      Move the game on{" "}
-      <strong>{formatTurnDate(targetDate, config.site.timezone)}</strong> to
-      another day. Everyone votes, then an admin confirms.
+      {skip ? "Skip the game on " : "Move the game on "}
+      <strong>{formatTurnDate(targetDate, config.site.timezone)}</strong>.
+      {skip
+        ? " This will not consume a rotation turn. An admin must approve."
+        : " Choose another day. Everyone votes, then an admin confirms."}
     </p>
+    {skip ? (
+      <SkipPreview config={config} gameNightId={night.id} date={targetDate} />
+    ) : null}
     <ErrorNotice message={error} />
     <form
       class="stacked-form"
@@ -61,16 +77,23 @@ export const SwapProposePage = ({
         <input type="hidden" name="password" value={password} />
       ) : null}
       <input type="hidden" name="targetDate" value={targetDate} />
-      <label>
-        New date
-        <input type="date" name="newDate" required />
-      </label>
+      {skip ? (
+        <label>
+          Reason (optional)
+          <input name="title" maxlength={80} />
+        </label>
+      ) : (
+        <label>
+          New date
+          <input type="date" name="newDate" required />
+        </label>
+      )}
       <label>
         Your name
         <PersonSelect config={config} night={night} />
       </label>
       <button class="button button-accent" type="submit">
-        Propose swap
+        {skip ? "Propose skip" : "Propose swap"}
       </button>
     </form>
   </Layout>
@@ -177,7 +200,7 @@ const VoteGroup = ({
   );
 };
 
-const SwapProposalCard = ({
+const SingleDateProposalCard = ({
   config,
   night,
   proposal,
@@ -185,20 +208,30 @@ const SwapProposalCard = ({
 }: {
   config: AppConfig;
   night: GameNightConfig;
-  proposal: Extract<Proposal, { type: "swap" }>;
+  proposal: Extract<Proposal, { type: "swap" | "skip" }>;
   password?: string;
 }) => (
   <article class="proposal-card">
-    <h3>Move to {formatTurnDate(proposal.newDate, config.site.timezone)}</h3>
+    <h3>
+      {proposal.type === "skip" ? "Skip " : "Move to "}
+      {formatTurnDate(
+        proposal.type === "skip" ? proposal.targetDate : proposal.newDate,
+        config.site.timezone,
+      )}
+    </h3>
     <p class="muted small">
-      Instead of {formatTurnDate(proposal.targetDate, config.site.timezone)} ·
-      by {personName(config, proposal.createdBy)}
+      {proposal.type === "skip"
+        ? (proposal.title ?? "Carry the rotation forward")
+        : `Instead of ${formatTurnDate(proposal.targetDate, config.site.timezone)}`}{" "}
+      · by {personName(config, proposal.createdBy)}
     </p>
     <VoteGroup
       config={config}
       night={night}
       proposalId={proposal.id}
-      dates={[proposal.newDate]}
+      dates={[
+        proposal.type === "skip" ? proposal.targetDate : proposal.newDate,
+      ]}
       votes={proposal.votes}
       {...(password ? { password } : {})}
     />
@@ -252,11 +285,7 @@ export const NightProposalsPage = ({
   today: string;
   password?: string;
 }) => {
-  const current = proposals.filter((proposal) =>
-    proposal.type === "swap"
-      ? proposal.newDate >= today
-      : proposal.candidates.some((date) => date >= today),
-  );
+  const current = proposals.filter((proposal) => proposalIsCurrent(proposal, today));
   return (
     <Layout title="Proposals" siteTitle={config.site.title} scripts>
       <a class="back-link" href={`/night/${night.id}`}>
@@ -270,8 +299,8 @@ export const NightProposalsPage = ({
       ) : (
         <div class="proposal-grid">
           {current.map((proposal) =>
-            proposal.type === "swap" ? (
-              <SwapProposalCard
+            proposal.type !== "planner" ? (
+              <SingleDateProposalCard
                 config={config}
                 night={night}
                 proposal={proposal}

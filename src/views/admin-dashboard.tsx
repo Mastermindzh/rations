@@ -18,6 +18,8 @@ import {
 import { AdminProposalsSection } from "./admin-proposals.js";
 import { ConfigEditorForm, ValidationIssueList } from "./admin-editor.js";
 import { NoticeBanner } from "./notice-banner.js";
+import { todayInTimezone } from "../schedule/calendar-date.js";
+import { SkipPreview } from "./skip-preview.js";
 
 type QuickNight = {
   night: GameNightConfig;
@@ -212,6 +214,59 @@ export const AdminDashboardPage = ({
                   Takes the next person in the rotation and shifts the rest.
                 </small>
               </form>
+              <form
+                class="reschedule-form"
+                method="post"
+                action={`/admin/night/${night.id}/${current.isExtra ? "remove-extra" : "skip"}`}
+                data-confirm={
+                  current.isExtra
+                    ? "Remove this extra day and its rotation turn?"
+                    : "Skip this night and shift later assignments?"
+                }
+              >
+                <CsrfField token={csrfToken} />
+                <input type="hidden" name="expectedVersion" value={version} />
+                <input type="hidden" name="date" value={current.date} />
+                {!current.isExtra ? (
+                  <SkipPreview
+                    config={config}
+                    gameNightId={night.id}
+                    date={current.date}
+                  />
+                ) : null}
+                <button class="button" type="submit">
+                  {current.isExtra ? "Remove extra day" : "Skip this night"}
+                </button>
+              </form>
+              {config.skippedDays
+                .filter((item) => item.gameNight === night.id)
+                .slice()
+                .sort((a, b) => b.date.localeCompare(a.date))
+                .map((item) => (
+                  <form
+                    class="reschedule-form"
+                    method="post"
+                    action={`/admin/night/${night.id}/restore`}
+                    data-confirm="Restore this night and its rotation turn?"
+                  >
+                    <CsrfField token={csrfToken} />
+                    <input
+                      type="hidden"
+                      name="expectedVersion"
+                      value={version}
+                    />
+                    <input type="hidden" name="date" value={item.date} />
+                    <p class="muted small">
+                      Skipped {formatTurnDate(item.date, config.site.timezone)}
+                      {item.reason ? ` · ${item.reason}` : ""}
+                    </p>
+                    {item.date >= todayInTimezone(config.site.timezone) ? (
+                      <button class="button" type="submit">
+                        Restore night
+                      </button>
+                    ) : null}
+                  </form>
+                ))}
             </article>
           );
         })}

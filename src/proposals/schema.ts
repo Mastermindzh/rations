@@ -67,6 +67,7 @@ export const swapProposalSchema = z
   .strictObject({
     ...baseFields,
     type: z.literal("swap"),
+    originalDate: isoDate.optional(),
     targetDate: isoDate,
     newDate: isoDate,
   })
@@ -80,7 +81,25 @@ export const swapProposalSchema = z
     { path: ["votes"], message: "Vote date must match the proposed new date" },
   );
 
+export const skipProposalSchema = z
+  .strictObject({
+    ...baseFields,
+    type: z.literal("skip"),
+    targetDate: isoDate,
+    originalDate: isoDate,
+  })
+  .refine(votesAreUnique, {
+    path: ["votes"],
+    message: "Only one vote per person and date is allowed",
+  })
+  .refine(
+    (proposal) =>
+      proposal.votes.every((vote) => vote.date === proposal.targetDate),
+    { path: ["votes"], message: "Vote date must match the skipped date" },
+  );
+
 export const proposalSchema = z.discriminatedUnion("type", [
+  skipProposalSchema,
   plannerProposalSchema,
   swapProposalSchema,
 ]);

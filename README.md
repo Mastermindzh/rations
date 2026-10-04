@@ -91,6 +91,11 @@ extraDays:
   - gameNight: board-games
     date: 2026-08-15
     reason: Extra session # Optional label
+
+skippedDays:
+  - gameNight: board-games
+    date: 2026-09-22
+    reason: Everyone away # Optional label
 ```
 
 - IDs use lowercase slugs such as `gloomhaven`.
@@ -106,12 +111,15 @@ extraDays:
 - When “Delay once” swaps an extra night, its assignment override uses the extra date and `isExtra: true`; the extra-night entry itself remains date/reason-only.
 - `extraDays` insert a one-off game night into the rotation. The date must be free (not already a scheduled or rescheduled occurrence). The person is assigned automatically—the extra day takes the next person in line and every later occurrence shifts forward by one. Extra days appear in the schedule with an “Extra” badge.
 
-The admin page contains quick actions for delaying a person, changing the next game date, or adding an extra day. A rescheduled date can be reset to its recurring scheduled date. The complete YAML editor and game schedule are collapsible. Invalid YAML is never saved.
+`skippedDays` omit recurring nights without consuming a rotation turn. Use the
+original recurring date for a moved night. The skip action removes conflicting
+date and person overrides automatically. Skipped dates remain unavailable to
+date proposals. Keep historical skips: deleting them changes later assignments.
 
 ## Date proposals
 
 People with a game night's shared link can suggest one or more new dates, or
-propose moving an existing occurrence, then vote on the options. The admin makes
+propose moving or skipping an existing occurrence, then vote on the options. The admin makes
 the final decision. Approving applies the selected schedule change and removes
 the proposal; denying or deleting removes it without changing the schedule.
 

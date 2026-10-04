@@ -27,10 +27,14 @@ export function newProposalId(type: Proposal["type"]): string {
   return `${type}-${randomBytes(6).toString("hex")}`;
 }
 
-export function voteTally(
-  proposal: Proposal,
-  date: string,
-): VoteTally {
+export function proposalIsCurrent(proposal: Proposal, today: string): boolean {
+  if (proposal.type === "planner") {
+    return proposal.candidates.some((date) => date >= today);
+  }
+  return (proposal.type === "skip" ? proposal.targetDate : proposal.newDate) >= today;
+}
+
+export function voteTally(proposal: Proposal, date: string): VoteTally {
   const details = aggregateVotes(proposal.votes).get(date);
   return { up: details?.up.length ?? 0, down: details?.down.length ?? 0 };
 }
@@ -50,9 +54,7 @@ export function applyVote(
 }
 
 // Planner candidates hidden from voters once enough people vote "can't make it".
-export function eliminatedCandidates(
-  proposal: PlannerProposal,
-): Set<string> {
+export function eliminatedCandidates(proposal: PlannerProposal): Set<string> {
   const threshold = proposal.unavailableThreshold;
   if (!threshold) {
     return new Set();
@@ -75,7 +77,9 @@ export function datesToApply(
   today: string,
 ): string[] {
   const seen = new Set<string>();
-  const isOccupied = createDateOccupancyChecker(config, night);
+  const isOccupied = createDateOccupancyChecker(config, night, {
+    includeSkippedDays: true,
+  });
   return dates.filter((date) => {
     if (date < today || seen.has(date)) {
       return false;

@@ -9,6 +9,7 @@ import {
   type VoteDetails,
 } from "../proposals/helpers.js";
 import { CsrfField, formatTurnDate, HiddenDateDisclosure } from "./shared.js";
+import { SkipPreview } from "./skip-preview.js";
 
 type TallyProps = {
   config: AppConfig;
@@ -78,11 +79,11 @@ const Actions = ({ id: proposalId }: ActionsProps) => (
   </div>
 );
 
-const SwapRow = ({
+const SingleDateRow = ({
   config,
   proposal,
   csrfToken,
-}: ProposalRowProps<Extract<Proposal, { type: "swap" }>>) => {
+}: ProposalRowProps<Extract<Proposal, { type: "swap" | "skip" }>>) => {
   const tallies = aggregateVotes(proposal.votes);
   return (
     <form method="post" action={`/admin/proposals/${proposal.id}/approve`}>
@@ -91,13 +92,27 @@ const SwapRow = ({
         <strong>
           {formatTurnDate(proposal.targetDate, config.site.timezone)}
         </strong>{" "}
-        → {formatTurnDate(proposal.newDate, config.site.timezone)} ·{" "}
+        {proposal.type === "skip"
+          ? `Skip this night${proposal.title ? `: ${proposal.title}` : ""}`
+          : `→ ${formatTurnDate(proposal.newDate, config.site.timezone)}`}{" "}
+        ·{" "}
         <Tally
           config={config}
-          details={tallies.get(proposal.newDate) ?? { up: [], down: [] }}
+          details={
+            tallies.get(
+              proposal.type === "skip" ? proposal.targetDate : proposal.newDate,
+            ) ?? { up: [], down: [] }
+          }
         />
       </p>
       <Actions id={proposal.id} />
+      {proposal.type === "skip" ? (
+        <SkipPreview
+          config={config}
+          gameNightId={proposal.gameNight}
+          date={proposal.targetDate}
+        />
+      ) : null}
     </form>
   );
 };
@@ -190,7 +205,11 @@ export const AdminProposalsSection = ({
               </div>
               <div class="proposal-meta">
                 <span class="badge badge-muted">
-                  {proposal.type === "planner" ? "Planner" : "Swap"}
+                  {proposal.type === "planner"
+                    ? "Planner"
+                    : proposal.type === "skip"
+                      ? "Skip"
+                      : "Swap"}
                 </span>
                 <span class="badge badge-extra">Open</span>
                 <time datetime={proposal.createdAt}>
@@ -200,8 +219,8 @@ export const AdminProposalsSection = ({
               <p class="muted small">
                 by {personName(config, proposal.createdBy)}
               </p>
-              {proposal.type === "swap" ? (
-                <SwapRow
+              {proposal.type !== "planner" ? (
+                <SingleDateRow
                   config={config}
                   proposal={proposal}
                   csrfToken={csrfToken}

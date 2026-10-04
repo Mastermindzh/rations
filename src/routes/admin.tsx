@@ -1,4 +1,6 @@
 import { Hono } from "hono";
+import { changeConfig } from "../config/file.js";
+import { applySkipNight, applyRestoreNight } from "../services/skip-night.js";
 import type { Context } from "hono";
 import type { AppEnv } from "../env.js";
 import {
@@ -177,6 +179,44 @@ export function adminRoutes(dataDirectory: string): Hono<AppEnv> {
       return renderConfigError(c, "Extra day not added", error);
     }
   });
+
+  for (const action of ["skip", "restore", "remove-extra"] as const) {
+    app.post(`/admin/night/:id/${action}`, async (c) => {
+      const body = await c.req.parseBody();
+      const id = c.req.param("id");
+      const date = stringField(body.date);
+      try {
+        await changeConfig(
+          dataDirectory,
+          stringField(body.expectedVersion),
+          (config) => {
+            if (action === "skip")
+              return applySkipNight(
+                config,
+                id,
+                date,
+                stringField(body.reason).trim(),
+              );
+            if (action === "restore")
+              return applyRestoreNight(config, id, date);
+            return {
+              ...config,
+              extraDays: config.extraDays.filter(
+                (item) => item.gameNight !== id || item.date !== date,
+              ),
+              overrides: config.overrides.filter(
+                (item) =>
+                  item.gameNight !== id || item.date !== date || !item.isExtra,
+              ),
+            };
+          },
+        );
+        return c.redirect("/admin?status=saved", 303);
+      } catch (error) {
+        return renderConfigError(c, "Could not change night", error);
+      }
+    });
+  }
 
   app.post("/admin/proposals/:id/approve", async (c) => {
     const body = await c.req.parseBody({ all: true });

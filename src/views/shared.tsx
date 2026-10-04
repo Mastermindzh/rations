@@ -28,7 +28,7 @@ type TurnRowProps = {
   config: AppConfig;
   turn: GameNightOccurrence;
   label?: string;
-  action?: { href: string; label: string };
+  actions?: { href: string; label: string }[];
 };
 
 type HiddenDateDisclosureProps = {
@@ -101,7 +101,7 @@ export const OverrideBadge = ({ turn }: TurnBadgeProps) =>
 export const ExtraBadge = ({ turn }: TurnBadgeProps) =>
   turn.isExtra ? <span class="badge badge-extra">Extra</span> : null;
 
-export const TurnRow = ({ config, turn, label, action }: TurnRowProps) => {
+export const TurnRow = ({ config, turn, label, actions }: TurnRowProps) => {
   const person = config.people[turn.personId];
   if (!person) {
     return null;
@@ -120,10 +120,14 @@ export const TurnRow = ({ config, turn, label, action }: TurnRowProps) => {
       </div>
       <OverrideBadge turn={turn} />
       <ExtraBadge turn={turn} />
-      {action ? (
-        <a class="turn-action" href={action.href}>
-          {action.label}
-        </a>
+      {actions?.length ? (
+        <div class="turn-actions">
+          {actions.map((action) => (
+            <a class="turn-action" href={action.href}>
+              {action.label}
+            </a>
+          ))}
+        </div>
       ) : null}
     </li>
   );

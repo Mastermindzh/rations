@@ -23,8 +23,10 @@ type GameNightPageProps = {
 };
 
 const proposalLabel = (config: AppConfig, proposal: Proposal): string => {
+  if (proposal.type === "skip")
+    return formatTurnDate(proposal.targetDate, config.site.timezone);
   if (proposal.type === "swap") {
-    return `Move ${formatTurnDate(proposal.targetDate, config.site.timezone)} → ${formatTurnDate(proposal.newDate, config.site.timezone)}`;
+    return `${formatTurnDate(proposal.targetDate, config.site.timezone)} → ${formatTurnDate(proposal.newDate, config.site.timezone)}`;
   }
   return proposal.title ?? "Proposed dates";
 };
@@ -99,7 +101,12 @@ export const GameNightPage = ({
             </summary>
             <ul class="panel-list">
               {openProposals.map((proposal) => (
-                <li>{proposalLabel(config, proposal)}</li>
+                <li class="proposal-summary">
+                  <span class="badge badge-muted">
+                    {{ skip: "skip", swap: "move", planner: "add" }[proposal.type]}
+                  </span>
+                  <span>{proposalLabel(config, proposal)}</span>
+                </li>
               ))}
             </ul>
             <a
@@ -113,6 +120,16 @@ export const GameNightPage = ({
         <details class="night-panel">
           <summary>Suggest a change</summary>
           <div class="night-actions-links">
+            {!schedule.current.isExtra ? (
+              <a
+                class="button"
+                href={withPassword(
+                  `/night/${night.id}/date/${schedule.current.date}/propose-skip`,
+                )}
+              >
+                Propose skipping this night
+              </a>
+            ) : null}
             <a
               class="button"
               href={withPassword(
@@ -133,12 +150,24 @@ export const GameNightPage = ({
               <TurnRow
                 config={config}
                 turn={turn}
-                action={{
-                  href: withPassword(
-                    `/night/${night.id}/date/${turn.date}/propose-swap`,
-                  ),
-                  label: "Propose new date",
-                }}
+                actions={[
+                  {
+                    href: withPassword(
+                      `/night/${night.id}/date/${turn.date}/propose-swap`,
+                    ),
+                    label: "Propose new date",
+                  },
+                  ...(!turn.isExtra
+                    ? [
+                        {
+                          href: withPassword(
+                            `/night/${night.id}/date/${turn.date}/propose-skip`,
+                          ),
+                          label: "Propose skip",
+                        },
+                      ]
+                    : []),
+                ]}
                 {...(index === 0 ? { label: "Next" } : {})}
               />
             ))}

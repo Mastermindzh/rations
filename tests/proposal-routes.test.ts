@@ -39,6 +39,35 @@ const adminSession = async (server: ReturnType<typeof createApp>) => {
 };
 
 describe("proposal HTTP routes", () => {
+  it("hides expired proposals consistently across public pages", async () => {
+    const { directory, server } = await setup();
+    const base = {
+      gameNight: "friday-dnd",
+      createdBy: "rick",
+      createdAt: "2000-01-01T00:00:00.000Z",
+      votes: [],
+    };
+    await writeFile(join(directory, "proposals.yml"), JSON.stringify({
+      proposals: [
+        { ...base, id: "old-swap", type: "swap", targetDate: "2000-01-01", newDate: "2000-01-02" },
+        { ...base, id: "old-planner", type: "planner", title: "Expired planner", candidates: ["2000-01-01"] },
+        { ...base, id: "old-skip", type: "skip", targetDate: "2000-01-01", originalDate: "2000-01-01" },
+        { ...base, id: "current-skip", type: "skip", targetDate: "2099-01-05", originalDate: "2099-01-05" },
+      ],
+    }));
+
+    for (const path of ["/?password=list-secret", "/night/friday-dnd?password=dnd-secret"]) {
+      const html = await (await server.request(path)).text();
+      expect(html).toContain("1 open date proposal");
+      expect(html).not.toContain("Expired planner");
+    }
+    const votes = await (await server.request("/night/friday-dnd/proposals?password=dnd-secret")).text();
+    expect(votes.match(/class="proposal-card"/g)).toHaveLength(1);
+    expect(votes).toContain("/proposals/current-skip/vote");
+    expect(votes).not.toContain("Expired planner");
+    expect(votes).not.toContain("/proposals/old-");
+  });
+
   it("requires the night share password to read proposals", async () => {
     const { server } = await setup();
 

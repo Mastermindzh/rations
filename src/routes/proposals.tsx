@@ -5,7 +5,11 @@ import { loadConfig } from "../config/file.js";
 import { ConfigError } from "../config/config-error.js";
 import type { GameNightConfig, LoadedConfig } from "../config/types.js";
 import { loadProposals } from "../proposals/store.js";
-import { createSwapProposal, castVote } from "../proposals/service.js";
+import {
+  createSwapProposal,
+  createSkipProposal,
+  castVote,
+} from "../proposals/service.js";
 import { createPlannerProposal } from "../proposals/service.js";
 import {
   shareAccessGranted,
@@ -14,7 +18,7 @@ import {
 import { todayInTimezone } from "../schedule/calendar-date.js";
 import { expandShortcut, type ShortcutKind } from "../schedule/date-ranges.js";
 import {
-  SwapProposePage,
+  OccurrenceProposePage,
   NightProposalsPage,
   PlannerProposePage,
 } from "../views/proposals.js";
@@ -176,72 +180,82 @@ export function proposalRoutes(dataDirectory: string): Hono<AppEnv> {
     );
   });
 
-  app.get("/night/:id/date/:date/propose-swap", async (c) => {
-    const password = c.req.query("password") ?? "";
-    const context = await loadAuthorizedNight(
-      c,
-      dataDirectory,
-      c.req.param("id"),
-      password,
-    );
-    if (context instanceof Response) {
-      return context;
-    }
-    const { loaded, night } = context;
-    return c.html(
-      <SwapProposePage
-        config={loaded.config}
-        night={night}
-        targetDate={c.req.param("date")}
-        {...(password ? { password } : {})}
-      />,
-    );
-  });
-
-  app.post("/night/:id/date/:date/propose-swap", async (c) => {
-    const body = await c.req.parseBody();
-    const limited = rateLimited(c, creationThrottle);
-    if (limited) {
-      return limited;
-    }
-    const password = stringField(body.password);
-    const context = await loadAuthorizedNight(
-      c,
-      dataDirectory,
-      c.req.param("id"),
-      password,
-    );
-    if (context instanceof Response) {
-      return context;
-    }
-    const { loaded, night } = context;
-    try {
-      await createSwapProposal(dataDirectory, {
-        gameNightId: night.id,
-        createdBy: stringField(body.person),
-        targetDate: c.req.param("date"),
-        newDate: stringField(body.newDate),
-      });
-    } catch (error) {
-      if (!(error instanceof ConfigError)) {
-        throw error;
+  for (const kind of ["swap", "skip"] as const) {
+    app.get(`/night/:id/date/:date/propose-${kind}`, async (c) => {
+      const password = c.req.query("password") ?? "";
+      const context = await loadAuthorizedNight(
+        c,
+        dataDirectory,
+        c.req.param("id"),
+        password,
+      );
+      if (context instanceof Response) {
+        return context;
       }
+      const { loaded, night } = context;
       return c.html(
-        <SwapProposePage
+        <OccurrenceProposePage
+          skip={kind === "skip"}
           config={loaded.config}
           night={night}
           targetDate={c.req.param("date")}
-          error={error.message}
           {...(password ? { password } : {})}
         />,
-        400,
       );
-    }
-    return c.redirect(
-      withSharePassword(`/night/${night.id}/proposals`, password),
-      303,
-    );
-  });
+    });
+
+    app.post(`/night/:id/date/:date/propose-${kind}`, async (c) => {
+      const body = await c.req.parseBody();
+      const limited = rateLimited(c, creationThrottle);
+      if (limited) {
+        return limited;
+      }
+      const password = stringField(body.password);
+      const context = await loadAuthorizedNight(
+        c,
+        dataDirectory,
+        c.req.param("id"),
+        password,
+      );
+      if (context instanceof Response) {
+        return context;
+      }
+      const { loaded, night } = context;
+      try {
+        await (kind === "skip" ? createSkipProposal : createSwapProposal)(
+          dataDirectory,
+          {
+            gameNightId: night.id,
+            createdBy: stringField(body.person),
+            targetDate: c.req.param("date"),
+            newDate: stringField(body.newDate),
+            ...(stringField(body.title).trim()
+              ? { title: stringField(body.title).trim() }
+              : {}),
+          },
+        );
+      } catch (error) {
+        if (!(error instanceof ConfigError)) {
+          throw error;
+        }
+        return c.html(
+          <OccurrenceProposePage
+            skip={kind === "skip"}
+            config={loaded.config}
+            night={night}
+            targetDate={c.req.param("date")}
+            error={error.message}
+            {...(password ? { password } : {})}
+          />,
+          400,
+        );
+      }
+      return c.redirect(
+        withSharePassword(`/night/${night.id}/proposals`, password),
+        303,
+      );
+    });
+  }
 
   app.get("/night/:id/proposals", async (c) => {
     const password = c.req.query("password") ?? "";
