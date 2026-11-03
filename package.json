@@ -17,7 +17,7 @@
     "hono": "4.13.5",
     "luxon": "3.7.2",
     "yaml": "2.9.0",
-    "zod": "4.5.4"
+    "zod": "4.6.6"
   },
   "devDependencies": {
     "@types/luxon": "3.7.5",
